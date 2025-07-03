@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Management</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #4361ee; --secondary: #3f37c9; --danger: #f72585;
+      --success: #4cc9f0; --dark: #212529; --light: #f8f9fa;
+      --gray: #6c757d; --warning: #ffc107;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: #f5f7fb; color: var(--dark); visibility: hidden; }
+    .container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .page-title { font-size: 2rem; font-weight: 700; color: var(--primary); }
+    .card { background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); padding: 1.5rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { font-weight: 500; margin-bottom: 0.5rem; color: var(--gray); display: block; }
+    input, textarea {
+      width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px;
+      transition: all 0.2s;
+    }
+    input:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67,97,238,0.1); }
+    .btn {
+      padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 500; cursor: pointer;
+      border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-primary:hover { background-color: var(--secondary); }
+    .btn-danger { background-color: var(--danger); color: white; }
+    .btn-success { background-color: var(--success); color: white; }
+    .btn-warning { background-color: var(--warning); color: var(--dark); }
+    .btn-outline { background-color: transparent; border: 1px solid var(--gray); color: var(--gray); }
+    .action-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .table-container { overflow-x: auto; border-radius: 8px; border: 1px solid #e2e8f0; margin-top: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    th { background-color: #f8f9fa; font-weight: 600; color: var(--gray); text-transform: uppercase; font-size: 0.75rem; }
+    tr:hover { background-color: #f8f9fa; }
+    .no-data { text-align: center; padding: 2rem; color: var(--gray); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1 class="page-title">Customer Management</h1>
+    <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
+  </div>
+  <div class="card">
+    <div class="form-section">
+      <h3 class="form-title" id="formTitle">Add Customer</h3>
+      <form id="customerForm">
+          <div class="form-group"><label for="custName">Customer Name</label><input type="text" id="custName" required /></div>
+          <div class="form-group"><label for="custGSTIN">GSTIN</label><input type="text" id="custGSTIN" /></div>
+          <div class="form-group"><label for="custAddress">Address</label><textarea id="custAddress"></textarea></div>
+          <div class="form-group"><label for="custPhone">Phone Number</label><input type="text" id="custPhone" required /></div>
+          <div class="form-group"><label for="custEmail">Email</label><input type="email" id="custEmail" required /></div>
+          <div class="action-btns">
+            <button type="submit" class="btn btn-primary" id="addBtn">➕ Add Customer</button>
+            <button type="submit" class="btn btn-warning" id="saveBtn" style="display:none">💾 Save Changes</button>
+            <button type="button" class="btn btn-outline" id="clearBtn">❌ Clear Form</button>
+          </div>
+      </form>
+    </div>
+    <hr>
+    <input type="text" id="searchInput" placeholder="Search customers by name, phone, or email..." style="width:100%; margin-top: 1rem; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px;"/>
+    <div class="action-btns" style="margin-top: 1rem;">
+      <button class="btn btn-success" id="exportBtn">📊 Export to Excel</button>
+    </div>
+    <div class="table-container">
+      <table id="customerTable">
+        <thead><tr><th>#</th><th>Name</th><th>GSTIN</th><th>Address</th><th>Phone</th><th>Email</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- SUPABASE CONFIGURATION ---
+const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co'; // Replace with your Supabase URL
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'; // Replace with your Supabase Anon Key
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// --- GLOBAL STATE ---
+let allCustomers = [];
+let currentlyEditingCustomerId = null;
+
+// --- DOM ELEMENTS ---
+const customerTableBody = document.querySelector("#customerTable tbody");
+const customerForm = document.getElementById("customerForm");
+const formTitle = document.getElementById("formTitle");
+const addBtn = document.getElementById("addBtn");
+const saveBtn = document.getElementById("saveBtn");
+const clearBtn = document.getElementById("clearBtn");
+const searchInput = document.getElementById("searchInput");
+const exportBtn = document.getElementById("exportBtn");
+
+// --- AUTHENTICATION & INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+        alert("You must be logged in to manage customers.");
+        window.location.href = 'login.html';
+        return;
+    }
+    document.body.style.visibility = 'visible';
+    await loadCustomers();
+    setupEventListeners();
+});
+
+// --- DATA FETCHING & RENDERING ---
+async function loadCustomers() {
+  customerTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Loading...</td></tr>`;
+  const { data, error } = await supabaseClient.from('customers').select('*').order('id', { ascending: false });
+  if (error) {
+    console.error('Error loading customers:', error);
+    customerTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Error loading data.</td></tr>`;
+    return;
+  }
+  allCustomers = data;
+  renderTable(allCustomers);
+}
+
+function renderTable(data) {
+  customerTableBody.innerHTML = '';
+  if (!data || data.length === 0) {
+    customerTableBody.innerHTML = `<tr><td colspan="7" class="no-data">No customers found.</td></tr>`;
+    return;
+  }
+  customerTableBody.innerHTML = data.map((c, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${c.name || '-'}</td>
+      <td>${c.gstin || '-'}</td>
+      <td>${c.address || '-'}</td>
+      <td>${c.phone || '-'}</td>
+      <td>${c.email || '-'}</td>
+      <td>
+        <button class="btn btn-warning btn-sm" data-action="edit" data-id="${c.id}">✏️</button>
+        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${c.id}">🗑️</button>
+      </td>
+    </tr>`).join('');
+}
+
+// --- FORM & CRUD LOGIC ---
+function getFormValues() {
+  const name = document.getElementById("custName").value.trim();
+  const phone = document.getElementById("custPhone").value.trim();
+  const email = document.getElementById("custEmail").value.trim();
+  
+  if (!name || !phone || !email) {
+      alert("Name, Phone, and Email are required fields.");
+      return null;
+  }
+  return {
+    name,
+    gstin: document.getElementById("custGSTIN").value.trim(),
+    address: document.getElementById("custAddress").value.trim(),
+    phone,
+    email,
+  };
+}
+
+async function handleFormSubmit(event) {
+    event.preventDefault();
+    const customerData = getFormValues();
+    if (!customerData) return;
+
+    if (currentlyEditingCustomerId) {
+        await saveCustomer(customerData);
+    } else {
+        await addCustomer(customerData);
+    }
+}
+
+async function addCustomer(customerData) {
+  addBtn.disabled = true;
+  const { error } = await supabaseClient.from('customers').insert([customerData]);
+  if (error) {
+    alert('Error adding customer: ' + error.message);
+  } else {
+    alert('Customer added successfully!');
+    clearForm();
+    await loadCustomers();
+  }
+  addBtn.disabled = false;
+}
+
+async function saveCustomer(customerData) {
+  saveBtn.disabled = true;
+  const { error } = await supabaseClient.from('customers').update(customerData).eq('id', currentlyEditingCustomerId);
+  if (error) {
+    alert('Error updating customer: ' + error.message);
+  } else {
+    alert('Customer updated successfully!');
+    clearForm();
+    await loadCustomers();
+  }
+  saveBtn.disabled = false;
+}
+
+async function deleteCustomer(id) {
+  if (!confirm('Are you sure you want to delete this customer?')) return;
+  const { error } = await supabaseClient.from('customers').delete().eq('id', id);
+  if (error) {
+    alert('Error deleting customer: ' + error.message);
+  } else {
+    alert('Customer deleted.');
+    await loadCustomers();
+  }
+}
+
+function editCustomer(id) {
+  // FIX: Use '==' for type coercion because id from dataset is a string
+  const customer = allCustomers.find(c => c.id == id);
+  if (!customer) {
+      console.error("Customer not found for editing:", id);
+      return;
+  }
+  document.getElementById("custName").value = customer.name;
+  document.getElementById("custGSTIN").value = customer.gstin || '';
+  document.getElementById("custAddress").value = customer.address || '';
+  document.getElementById("custPhone").value = customer.phone || '';
+  document.getElementById("custEmail").value = customer.email || '';
+  currentlyEditingCustomerId = customer.id;
+  toggleFormMode(false); // Switch to "Save" mode
+  window.scrollTo(0, 0);
+}
+
+function clearForm() {
+  customerForm.reset();
+  currentlyEditingCustomerId = null;
+  toggleFormMode(true); // Switch back to "Add" mode
+}
+
+function toggleFormMode(isAddMode) {
+  addBtn.style.display = isAddMode ? "inline-flex" : "none";
+  saveBtn.style.display = isAddMode ? "none" : "inline-flex";
+  formTitle.innerText = isAddMode ? "Add Customer" : `Editing Customer (ID: ${currentlyEditingCustomerId})`;
+}
+
+// --- EVENT LISTENERS & UTILITIES ---
+function setupEventListeners() {
+    customerForm.addEventListener("submit", handleFormSubmit);
+    clearBtn.addEventListener("click", clearForm);
+    searchInput.addEventListener("keyup", filterTable);
+    exportBtn.addEventListener("click", exportCustomersToExcel);
+
+    // Event delegation for edit/delete buttons
+    customerTableBody.addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const id = button.dataset.id;
+
+        if (action === 'edit') {
+            editCustomer(id);
+        } else if (action === 'delete') {
+            deleteCustomer(id);
+        }
+    });
+}
+
+function filterTable() {
+  const query = searchInput.value.toLowerCase();
+  const filtered = allCustomers.filter(c =>
+    (c.name || '').toLowerCase().includes(query) ||
+    (c.phone || "").toLowerCase().includes(query) ||
+    (c.email || "").toLowerCase().includes(query)
+  );
+  renderTable(filtered);
+}
+
+function exportCustomersToExcel() {
+  if (!allCustomers.length) return alert("No customers to export.");
+  const wsData = [["Name", "GSTIN", "Address", "Phone", "Email"]];
+  allCustomers.forEach(c => wsData.push([c.name, c.gstin || '', c.address || '', c.phone || '', c.email || '']));
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Customers");
+  XLSX.writeFile(wb, "customers_export.xlsx");
+}
+</script>
+</body>
+</html>

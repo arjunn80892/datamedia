@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Verify Your Email - Invoice System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary-color: #4361ee;
+      --secondary-color: #3f37c9;
+      --success-color: #4cc9f0;
+      --danger-color: #f72585;
+      --dark-color: #1b263b;
+      --light-color: #f8f9fa;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f5f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .verification-container {
+      width: 100%;
+      max-width: 500px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      text-align: center;
+    }
+    .verification-header {
+      background-color: var(--primary-color);
+      color: white;
+      padding: 30px;
+    }
+    .verification-header i {
+      font-size: 50px;
+      margin-bottom: 15px;
+    }
+    .verification-header h2 {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .verification-body {
+      padding: 30px;
+    }
+    .verification-icon {
+      font-size: 80px;
+      color: var(--success-color);
+      margin-bottom: 20px;
+    }
+    .verification-body h3 {
+      margin-bottom: 15px;
+      color: var(--dark-color);
+    }
+    .verification-body p {
+      color: #666;
+      margin-bottom: 25px;
+      line-height: 1.6;
+    }
+    .verification-email {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 25px;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn:hover {
+      background-color: var(--secondary-color);
+      transform: translateY(-2px);
+    }
+    .btn:disabled {
+        background-color: var(--gray);
+        cursor: not-allowed;
+        transform: none;
+    }
+    .btn i {
+      margin-right: 8px;
+    }
+    .resend-link {
+      margin-top: 20px;
+      color: #666;
+      font-size: 14px;
+    }
+    .resend-link a {
+      color: var(--primary-color);
+      text-decoration: none;
+    }
+    .resend-link a:hover {
+      text-decoration: underline;
+    }
+    .verification-footer {
+      padding: 20px;
+      border-top: 1px solid #eee;
+      font-size: 14px;
+      color: #777;
+    }
+    .countdown {
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    .pending-state, .success-state, .error-state {
+      display: none;
+    }
+    .show {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="verification-container">
+    <div class="verification-header">
+      <i class="fas fa-envelope"></i>
+      <h2>Email Verification</h2>
+      <p>Secure your account</p>
+    </div>
+
+    <!-- Pending -->
+    <div class="verification-body pending-state show" id="pendingState">
+      <div class="verification-icon">
+        <i class="fas fa-envelope-open-text"></i>
+      </div>
+      <h3>Verify Your Email Address</h3>
+      <p>
+        We've sent a verification link to <strong class="verification-email" id="userEmail">your email</strong>.
+        Please check your inbox and click the link to verify.
+      </p>
+      <button class="btn" id="resendBtn"><i class="fas fa-paper-plane"></i>Resend Email</button>
+      <div class="resend-link">You can resend in <span class="countdown">60</span> seconds</div>
+    </div>
+
+    <!-- Success -->
+    <div class="verification-body success-state" id="successState">
+      <div class="verification-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <h3>Email Verified Successfully!</h3>
+      <p>You will be redirected to the login page shortly.</p>
+      <a href="index.html" class="btn"><i class="fas fa-sign-in-alt"></i>Go to Login Now</a>
+    </div>
+
+    <!-- Error -->
+    <div class="verification-body error-state" id="errorState">
+      <div class="verification-icon" style="color: var(--danger-color);">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <h3>Verification Required</h3>
+      <p>It seems you are not logged in or your session has expired. Please log in to resend the verification email.</p>
+      <a href="index.html" class="btn"><i class="fas fa-sign-in-alt"></i>Go to Login</a>
+    </div>
+
+    <div class="verification-footer">
+      Need help? <a href="mailto:support@invoicesystem.com">Contact support</a>
+    </div>
+  </div>
+
+  <script>
+    // FIX: Correctly initialize the Supabase client
+    const { createClient } = window.supabase;
+    const supabase = createClient(
+      'https://riisjtqzsjebzjanwvgt.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'
+    );
+
+    const pendingState = document.getElementById('pendingState');
+    const successState = document.getElementById('successState');
+    const errorState = document.getElementById('errorState');
+    const resendBtn = document.getElementById('resendBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const countdownEl = document.querySelector('.countdown');
+    const userEmailSpan = document.getElementById('userEmail');
+    let countdownInterval;
+
+    function show(state) {
+      pendingState.classList.remove('show');
+      successState.classList.remove('show');
+      errorState.classList.remove('show');
+      state.classList.add('show');
+    }
+
+    function startCountdown(seconds) {
+      clearInterval(countdownInterval); // FIX: Clear any existing timer before starting a new one
+      resendBtn.disabled = true;
+      let counter = seconds;
+      countdownEl.textContent = counter;
+      countdownInterval = setInterval(() => {
+        counter--;
+        countdownEl.textContent = counter;
+        if (counter <= 0) {
+          clearInterval(countdownInterval);
+          resendBtn.disabled = false;
+          countdownEl.textContent = '0';
+        }
+      }, 1000);
+    }
+
+    async function checkVerificationStatus() {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user && user.email_confirmed_at) {
+        show(successState);
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 4000); // Redirect after 4 seconds
+      } else if (user && user.email) {
+        userEmailSpan.textContent = user.email;
+        show(pendingState);
+        startCountdown(60);
+      } else {
+        show(errorState);
+      }
+    }
+
+    resendBtn.addEventListener('click', async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { error } = await supabase.auth.resend({
+          type: 'signup',
+          email: user.email
+        });
+        if (error) {
+            alert("Error resending email: " + error.message);
+        } else {
+            alert('Verification email has been resent.');
+            startCountdown(60);
+        }
+      } else {
+        alert("Could not find user session. Please log in again.");
+        show(errorState);
+      }
+    });
+    
+    if(retryBtn) {
+        retryBtn.addEventListener('click', () => {
+            checkVerificationStatus();
+        });
+    }
+
+    // FIX: This listener is crucial for detecting verification in real-time.
+    supabase.auth.onAuthStateChange((event, session) => {
+      // The 'USER_UPDATED' event fires when email_confirmed_at changes.
+      if (event === 'USER_UPDATED' && session?.user?.email_confirmed_at) {
+        show(successState);
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 4000);
+      }
+    });
+
+    // Initial check when the page loads
+    document.addEventListener('DOMContentLoaded', checkVerificationStatus);
+  </script>
+</body>
+</html>

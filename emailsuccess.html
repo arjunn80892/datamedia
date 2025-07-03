@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verification Successful | InvoicePro</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary-color: #4361ee;
+      --secondary-color: #3f37c9;
+      --success-color: #28a745;
+      --dark-color: #1b263b;
+    }
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .verification-container {
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+    .verification-icon {
+      font-size: 80px;
+      color: var(--success-color);
+      margin-bottom: 20px;
+    }
+    h2 {
+      color: var(--dark-color);
+      font-weight: 600;
+      margin-bottom: 15px;
+    }
+    p {
+      color: #6c757d;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    .btn-primary {
+      background-color: var(--primary-color);
+      border: none;
+      height: 48px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    .btn-primary:hover {
+      background-color: var(--secondary-color);
+    }
+    .spinner-border {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-top: 20px;
+    }
+    .hidden {
+        display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="verification-container">
+    <!-- Initial Verifying State -->
+    <div id="verifyingState">
+        <div class="verification-icon">
+            <i class="bi bi-patch-check"></i>
+        </div>
+        <h2>Verifying your account...</h2>
+        <p>Please wait a moment while we confirm your email address.</p>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+    
+    <!-- Success State -->
+    <div id="successState" class="hidden">
+        <div class="verification-icon">
+            <i class="bi bi-check-circle-fill"></i>
+        </div>
+        <h2>Email Verified!</h2>
+        <p>Your account has been successfully verified. You will be redirected to the login page shortly.</p>
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co'; // Replace with your Supabase URL
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'; // Replace with your Supabase Anon Key
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const verifyingState = document.getElementById('verifyingState');
+    const successState = document.getElementById('successState');
+
+    // This listener is the core of the verification process.
+    // When a user arrives on this page by clicking the verification link in their email,
+    // Supabase detects the special token in the URL. It then automatically signs the user in
+    // for a brief moment and fires the 'SIGNED_IN' event. We use this event as confirmation
+    // that the verification was successful.
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        console.log('Verification successful, user is signed in.');
+        
+        // Show the success message
+        verifyingState.classList.add('hidden');
+        successState.classList.remove('hidden');
+
+        // Redirect to the login page after a short delay
+        setTimeout(() => {
+          window.location.href = 'index.html'; // Redirect to your login page
+        }, 4000); // 4-second delay
+      }
+    });
+
+    // Fallback timer: If for some reason the SIGNED_IN event doesn't fire
+    // (e.g., user navigates here directly), redirect them to login after a delay.
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        // If the success message is not yet visible, redirect anyway.
+        if (successState.classList.contains('hidden')) {
+            console.log("No verification event detected, redirecting to login.");
+            window.location.href = 'index.html';
+        }
+      }, 7000); // 7-second fallback delay
+    });
+  </script>
+</body>
+</html>

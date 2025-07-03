@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoice History</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    :root {
+      --primary: #4361ee; --secondary: #3f37c9; --danger: #f72585;
+      --success: #4cc9f0; --highlight: #00adb5; --dark: #212529;
+      --light: #f8f9fa; --gray: #6c757d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f5f7fb; color: var(--dark); line-height: 1.6; padding: 20px; visibility: hidden; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); padding: 30px; }
+    h2 { text-align: center; color: var(--dark); margin-bottom: 1.5rem; font-size: 1.8rem; position: relative; padding-bottom: 0.5rem; }
+    h2::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 3px; background-color: var(--highlight); }
+    .filter-section { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+    .filter-group { flex: 1; min-width: 200px; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--gray); font-size: 0.9rem; }
+    input, select { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; transition: all 0.3s ease; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1); }
+    .action-buttons { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn {
+      padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 500; cursor: pointer;
+      border: none; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-success { background-color: var(--success); color: white; }
+    .btn-danger { background-color: var(--danger); color: white; }
+    .btn-outline { background-color: transparent; border: 1px solid var(--gray); color: var(--gray); }
+    .btn-icon { font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background-color: var(--highlight); color: white; font-weight: 500; position: sticky; top: 0; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    tr:hover { background-color: #f1f3f5; }
+    .notification {
+      position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white;
+      padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex; align-items: center; gap: 0.5rem; z-index: 1000; animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @media (max-width: 768px) {
+      .filter-group { min-width: 100%; }
+      .action-buttons { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+      table { display: block; overflow-x: auto; white-space: nowrap;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Invoice History</h2>
+
+    <div class="filter-section">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="searchInput">Search by Client or Ref #</label>
+          <input type="text" id="searchInput" placeholder="Enter name or reference number">
+        </div>
+        <div class="filter-group">
+          <label for="fromDate">From Date</label>
+          <input type="date" id="fromDate">
+        </div>
+        <div class="filter-group">
+          <label for="toDate">To Date</label>
+          <input type="date" id="toDate">
+        </div>
+        <div class="filter-group">
+          <label for="taxFilter">Tax Type</label>
+          <select id="taxFilter">
+            <option value="">All Types</option>
+            <option value="cgst_sgst">CGST + SGST</option>
+            <option value="igst">IGST</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="applyFilterBtn">
+        <i class="fas fa-filter btn-icon"></i> Apply Filters
+      </button>
+       <button class="btn btn-outline" id="resetFilterBtn">
+        <i class="fas fa-undo btn-icon"></i> Reset
+      </button>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-success" id="exportBtn">
+        <i class="fas fa-file-excel"></i> Export to Excel
+      </button>
+      <button class="btn btn-primary" id="downloadSelectedBtn">
+        <i class="fas fa-download"></i> Download Selected PDFs
+      </button>
+      <button class="btn btn-danger" id="deleteSelectedBtn">
+        <i class="fas fa-trash"></i> Delete Selected
+      </button>
+      <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </button>
+    </div>
+
+    <table id="invoiceTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="toggleAllCheckbox"></th>
+          <th>Invoice #</th>
+          <th>Date</th>
+          <th>Client Name</th>
+          <th>Tax Type</th>
+          <th>Total (₹)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align:center">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co'; // Replace with your Supabase URL
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'; // Replace with your Supabase Anon Key
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- GLOBAL STATE ---
+    let allInvoices = [];
+
+    // --- AUTHENTICATION & INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        window.location.href = 'login.html';
+      } else {
+        document.body.style.visibility = 'visible';
+        await fetchInvoices();
+        setupEventListeners();
+      }
+    });
+
+    // --- DATA FETCHING & RENDERING ---
+    async function fetchInvoices() {
+      const tbody = document.querySelector('#invoiceTable tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
+
+      // FIX: Corrected the order by column from 'date' to 'invoice_date'
+      const { data, error } = await supabaseClient
+        .from('invoices')
+        .select('*')
+        .order('invoice_date', { ascending: false });
+
+      if (error) {
+        console.error("Error loading invoices:", error);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
+        return;
+      }
+
+      allInvoices = data;
+      renderTable(allInvoices);
+    }
+
+    function renderTable(invoicesToRender) {
+      const tbody = document.querySelector('#invoiceTable tbody');
+      tbody.innerHTML = '';
+      if (!invoicesToRender || invoicesToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">No invoices found.</td></tr>`;
+        return;
+      }
+      
+      // FIX: Corrected all field names to match the database schema and added fallbacks for numbers
+      invoicesToRender.forEach(invoice => {
+        const totalTax = (invoice.cgst || 0) + (invoice.sgst || 0) + (invoice.igst || 0);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input type="checkbox" class="rowCheckbox" value="${invoice.id}" /></td>
+          <td>INV-${invoice.id}</td>
+          <td>${invoice.invoice_date ? new Date(invoice.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+          <td>${invoice.client_name || 'N/A'}</td>
+          <td>${invoice.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
+          <td>₹${(invoice.grand_total || 0).toFixed(2)}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="viewInvoice(${invoice.id})">View/Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${invoice.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // --- ACTIONS (DELETE, EXPORT, ETC.) ---
+    async function deleteInvoice(id) {
+        if (!confirm(`Are you sure you want to delete Invoice INV-${id}? This cannot be undone.`)) return;
+        const { error } = await supabaseClient.from('invoices').delete().eq('id', id);
+        if (error) {
+            showNotification(`Error: ${error.message}`, 'danger');
+        } else {
+            showNotification(`Invoice INV-${id} deleted successfully.`, 'success');
+            fetchInvoices(); // Refresh the list
+        }
+    }
+    
+    async function deleteSelected() {
+        const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+        if (selectedIds.length === 0) {
+            showNotification("No invoices selected.", 'danger');
+            return;
+        }
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected invoice(s)?`)) return;
+        const { error } = await supabaseClient.from('invoices').delete().in('id', selectedIds);
+        if (error) {
+            showNotification(`Error: ${error.message}`, 'danger');
+        } else {
+            showNotification(`${selectedIds.length} invoice(s) deleted successfully.`, 'success');
+            fetchInvoices();
+        }
+    }
+
+    function exportInvoicesToExcel() {
+      const dataToExport = allInvoices;
+      if (!dataToExport.length) return alert("No invoices to export.");
+      
+      const rows = [["Invoice #", "Date", "Client", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
+      dataToExport.forEach(inv => {
+        const totalTax = (inv.cgst || 0) + (inv.sgst || 0) + (inv.igst || 0);
+        rows.push([
+          `INV-${inv.id}`,
+          inv.invoice_date,
+          inv.client_name,
+          inv.tax_type,
+          (inv.subtotal || 0).toFixed(2),
+          totalTax.toFixed(2),
+          (inv.grand_total || 0).toFixed(2)
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
+      XLSX.writeFile(wb, `invoice_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+    
+    function viewInvoice(id) {
+      window.location.href = `invoice.html?id=${id}`; // Assuming your invoice creation page is invoice.html
+    }
+
+    // --- FILTERING LOGIC ---
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const from = document.getElementById('fromDate').value;
+      const to = document.getElementById('toDate').value;
+      const tax = document.getElementById('taxFilter').value;
+
+      const filtered = allInvoices.filter(inv => {
+        const date = inv.invoice_date;
+        const dateValid = (!from || date >= from) && (!to || date <= to);
+        const textMatch = (inv.client_name || '').toLowerCase().includes(search) || `inv-${inv.id}`.includes(search);
+        const taxMatch = !tax || inv.tax_type === tax;
+        return dateValid && textMatch && taxMatch;
+      });
+      renderTable(filtered);
+    }
+    
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+        document.getElementById('taxFilter').value = '';
+        renderTable(allInvoices);
+    }
+
+    // --- UTILITY FUNCTIONS ---
+    function showNotification(message, type = 'success') {
+      const div = document.createElement('div');
+      div.className = `notification`;
+      div.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+      div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+      document.body.appendChild(div);
+      setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 300);
+      }, 3000);
+    }
+
+    // --- EVENT LISTENERS ---
+    function setupEventListeners() {
+      document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
+      document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
+      document.getElementById('exportBtn').addEventListener('click', exportInvoicesToExcel);
+      document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+      document.getElementById('toggleAllCheckbox').addEventListener('click', (e) => {
+          document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = e.target.checked);
+      });
+      // Note: downloadSelectedInvoicesPDF is not implemented as it requires re-generating PDFs.
+      // The button is left for future implementation if needed.
+      document.getElementById('downloadSelectedBtn').style.display = 'none';
+    }
+    
+    // Make functions accessible from HTML onclick attributes
+    window.viewInvoice = viewInvoice;
+    window.deleteInvoice = deleteInvoice;
+
+</script>
+</body>
+</html>
