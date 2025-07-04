@@ -607,18 +607,19 @@
         const year = now.getFullYear();
 
         // Get count of existing invoices for this month & year
-        const { data: existingInvoices, error: countError } = await supabaseClient
-        .from('purchase_invoices')
-        .select('id', { count: 'exact' })
-        .gte('invoice_date', `${year}-${month}-01`)
-        .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`);
+        const { count, error: countError } = await supabaseClient
+          .from('purchase_invoices')
+          .select('*', { count: 'exact', head: true })
+          .gte('invoice_date', `${year}-${month}-01`)
+          .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`);
+
 
         if (countError) {
             console.error("Error getting monthly count", countError);
             throw countError;
         }
 
-        const monthlyNumber = ((existingInvoices?.length || 0) + 1).toString().padStart(4, '0');
+        const monthlyNumber = ((count || 0) + 1).toString().padStart(4, '0');
         const invoiceNumber = `PUR-${monthlyNumber}-${month}-${year}`;
 
         const invoiceData = {

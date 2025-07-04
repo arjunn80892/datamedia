@@ -181,7 +181,7 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
-          <td>PUR-${purchase.id}</td>
+          <td>${purchase.purchase_number || `PUR-${purchase.id}`}</td>
           <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
           <td>${purchase.supplier_name || 'N/A'}</td>
           <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
@@ -258,7 +258,7 @@
       doc.setFontSize(20);
       doc.text('PURCHASE INVOICE', 105, 20, { align: 'center' });
       doc.setFontSize(12);
-      doc.text(`PUR-${purchase.id}`, 105, 30, { align: 'center' });
+      doc.text(`${purchase.purchase_number || 'PUR-' + purchase.id}`, 105, 30, { align: 'center' });
       
       // Supplier and date info
       doc.text(`Date: ${new Date(purchase.invoice_date).toLocaleDateString()}`, 15, 40);
@@ -311,7 +311,7 @@
         
         for (const purchase of purchases) {
           const pdfBlob = await generatePurchasePDF(purchase);
-          zip.file(`PUR-${purchase.id}.pdf`, pdfBlob);
+          zip.file(`${purchase.purchase_number || 'PUR-' + purchase.id}.pdf`, pdfBlob);
         }
         
         const content = await zip.generateAsync({ type: 'blob' });
@@ -333,8 +333,9 @@
       const filtered = allPurchases.filter(purchase => {
         const date = purchase.invoice_date;
         const dateValid = (!from || date >= from) && (!to || date <= to);
-        const textMatch = (purchase.supplier_name || '').toLowerCase().includes(search) || `pur-${purchase.id}`.includes(search);
-        const taxMatch = !tax || purchase.tax_type === tax;
+        (purchase.supplier_name || '').toLowerCase().includes(search) || 
+        (purchase.purchase_number || '').toLowerCase().includes(search);
+         const taxMatch = !tax || purchase.tax_type === tax;
         return dateValid && textMatch && taxMatch;
       });
       renderTable(filtered);
