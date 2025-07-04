@@ -182,7 +182,7 @@
         <input type="number" id="quantity" class="form-control" min="1" value="1">
         <input type="number" id="price" class="form-control" step="0.01" placeholder="0.00">
         <input type="number" id="discount" class="form-control" min="0" max="100" value="0" placeholder="0%">
-        <button id="addProductBtn" class="btn btn-primary">➕ Add Product</button>
+        <button id="addProductBtn" class="btn btn-primary" type="button">➕ Add Product</button>
       </div>
       
       <textarea id="productDescription" class="form-control" style="margin-top: 10px;" rows="2" placeholder="Product description"></textarea>
@@ -513,10 +513,17 @@ const debouncedProductSearch = debounce(async (query) => {
 }, 300);
 
 function selectClient(client) {
+    // Stores the selected client object for later use (like getting the GSTIN)
     selectedClientForQuotation = client;
+    
+    // Updates the main form fields with the client's data
     clientNameInput.value = client.name;
     billingAddressInput.value = client.address || '';
+    
+    // Updates the search bar text itself to show the selection
     clientSearchInput.value = client.name;
+    
+    // Hides the search results dropdown
     clientSearchResultsContainer.style.display = 'none';
 }
 
