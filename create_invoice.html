@@ -632,6 +632,13 @@
                 .single());
         } else {
             // CREATE NEW INVOICE
+            // 1. Generate custom invoice number using Supabase RPC
+            const { data: invoiceNumResult, error: numError } = await supabaseClient.rpc('generate_invoice_number');
+            if (numError) throw numError;
+
+            invoiceData.invoice_number = invoiceNumResult;
+
+            // 2. Insert new invoice with the custom number
             ({ data, error } = await supabaseClient
                 .from('invoices')
                 .insert(invoiceData)

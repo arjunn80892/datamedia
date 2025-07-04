@@ -538,14 +538,27 @@ async function saveOrUpdateQuotation(showAlert = true) {
         result = data;
         error = updateError;
     } else {
+        // Generate monthly-reset quotation number from Supabase function
+        const { data: generatedNumber, error: numberError } = await supabaseClient.rpc('generate_quotation_number');
+
+        if (numberError) {
+            console.error('Error generating quotation number:', numberError);
+            if (showAlert) alert("Failed to generate quotation number: " + numberError.message);
+            isSaving = false;
+            return null;
+        }
+
+        dataToSave.quotation_number = generatedNumber;
+
         const { data, error: insertError } = await supabaseClient
             .from('quotations')
             .insert([dataToSave])
             .select()
             .single();
+
         result = data;
         error = insertError;
-    }
+        }
 
     isSaving = false;
 
@@ -704,9 +717,6 @@ async function saveOrUpdateQuotation(showAlert = true) {
         }
         doc.save(`Quotation_${clientName.replace(/ /g, '_')}_${quotationNumber}.pdf`);
     }
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>
