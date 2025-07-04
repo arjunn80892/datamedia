@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -8,8 +8,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
+     <style>
         :root {
             --primary: #4361ee;
             --primary-light: rgba(67, 97, 238, 0.1);
@@ -397,7 +396,7 @@
     </style>
 </head>
 <body>
-    <!-- Sidebar -->
+  <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
             <a href="dashboard.html" class="logo">
@@ -478,9 +477,7 @@
             </div>
         </div>
     </div>
-
-    <!-- Main Content -->
-    <div class="main-content" id="mainContent">
+     <div class="main-content" id="mainContent">
         <div class="page-header">
             <div>
                 <h1 class="page-title">Dashboard</h1>
@@ -496,16 +493,16 @@
             </div>
         </div>
         
-        <!-- Stats Cards -->
+        <!-- Stats Cards - Now with dynamic IDs -->
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-icon" style="background-color: rgba(67, 97, 238, 0.1); color: var(--primary);">
                     <i class="bi bi-receipt"></i>
                 </div>
                 <div class="stat-title">Total Invoices</div>
-                <div class="stat-value">128</div>
-                <div class="stat-change positive">
-                    <i class="bi bi-arrow-up"></i> 12.5% from last month
+                <div class="stat-value" id="total-invoices">Loading...</div>
+                <div class="stat-change" id="invoice-change">
+                    <i class="bi bi-arrow-up"></i> Calculating...
                 </div>
             </div>
             
@@ -514,9 +511,9 @@
                     <i class="bi bi-check-circle"></i>
                 </div>
                 <div class="stat-title">Paid Invoices</div>
-                <div class="stat-value">98</div>
-                <div class="stat-change positive">
-                    <i class="bi bi-arrow-up"></i> 8.2% from last month
+                <div class="stat-value" id="paid-invoices">Loading...</div>
+                <div class="stat-change" id="paid-change">
+                    <i class="bi bi-arrow-up"></i> Calculating...
                 </div>
             </div>
             
@@ -525,9 +522,9 @@
                     <i class="bi bi-hourglass-split"></i>
                 </div>
                 <div class="stat-title">Pending Invoices</div>
-                <div class="stat-value">25</div>
-                <div class="stat-change negative">
-                    <i class="bi bi-arrow-down"></i> 3.4% from last month
+                <div class="stat-value" id="pending-invoices">Loading...</div>
+                <div class="stat-change" id="pending-change">
+                    <i class="bi bi-arrow-up"></i> Calculating...
                 </div>
             </div>
             
@@ -536,9 +533,9 @@
                     <i class="bi bi-exclamation-circle"></i>
                 </div>
                 <div class="stat-title">Overdue Invoices</div>
-                <div class="stat-value">5</div>
-                <div class="stat-change negative">
-                    <i class="bi bi-arrow-down"></i> 1.2% from last month
+                <div class="stat-value" id="overdue-invoices">Loading...</div>
+                <div class="stat-change" id="overdue-change">
+                    <i class="bi bi-arrow-up"></i> Calculating...
                 </div>
             </div>
         </div>
@@ -550,56 +547,16 @@
                         <h5 class="card-title">Recent Invoices</h5>
                         <a href="invoice_history.html" class="view-all">View All</a>
                     </div>
-                    <ul class="activity-list">
+                    <ul class="activity-list" id="recent-invoices">
                         <li class="activity-item">
                             <div class="activity-icon">
                                 <i class="bi bi-receipt"></i>
                             </div>
                             <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-105 for ABC Company</div>
-                                <div class="activity-time">Due today • $1,250.00</div>
+                                <div class="activity-title">Loading invoices...</div>
+                                <div class="activity-time">Please wait</div>
                             </div>
-                            <span class="badge bg-success activity-badge">Paid</span>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-receipt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-104 for XYZ Corporation</div>
-                                <div class="activity-time">Due in 2 days • $2,450.00</div>
-                            </div>
-                            <span class="badge bg-warning text-dark activity-badge">Pending</span>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-receipt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-103 for Global Solutions</div>
-                                <div class="activity-time">Paid today • $3,750.00</div>
-                            </div>
-                            <span class="badge bg-success activity-badge">Paid</span>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-receipt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-102 for Tech Innovators</div>
-                                <div class="activity-time">Overdue by 3 days • $1,980.00</div>
-                            </div>
-                            <span class="badge bg-danger activity-badge">Overdue</span>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-receipt"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-101 for Digital Creations</div>
-                                <div class="activity-time">Due in 5 days • $2,650.00</div>
-                            </div>
-                            <span class="badge bg-warning text-dark activity-badge">Pending</span>
+                            <span class="badge bg-secondary activity-badge">Loading</span>
                         </li>
                     </ul>
                 </div>
@@ -611,50 +568,14 @@
                         <h5 class="card-title">Recent Activity</h5>
                         <a href="#" class="view-all">View All</a>
                     </div>
-                    <ul class="activity-list">
+                    <ul class="activity-list" id="recent-activity">
                         <li class="activity-item">
                             <div class="activity-icon">
-                                <i class="bi bi-file-earmark-text"></i>
+                                <i class="bi bi-hourglass"></i>
                             </div>
                             <div class="activity-content">
-                                <div class="activity-title">New invoice created</div>
-                                <div class="activity-time">2 minutes ago</div>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-check-circle"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice #INV-2023-104 marked as paid</div>
-                                <div class="activity-time">1 hour ago</div>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-person-plus"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">New client added</div>
-                                <div class="activity-time">3 hours ago</div>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-box-seam"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">New product added</div>
-                                <div class="activity-time">5 hours ago</div>
-                            </div>
-                        </li>
-                        <li class="activity-item">
-                            <div class="activity-icon">
-                                <i class="bi bi-envelope"></i>
-                            </div>
-                            <div class="activity-content">
-                                <div class="activity-title">Invoice reminder sent</div>
-                                <div class="activity-time">1 day ago</div>
+                                <div class="activity-title">Loading activities...</div>
+                                <div class="activity-time">Please wait</div>
                             </div>
                         </li>
                     </ul>
@@ -663,7 +584,7 @@
         </div>
     </div>
 
- <script>
+    <script>
     // Initialize Supabase client
     document.addEventListener('DOMContentLoaded', async () => {
         const { createClient } = window.supabase;
@@ -683,30 +604,229 @@
                     document.querySelector('.user-name').textContent = user.email.split('@')[0] || 'User';
                     document.querySelector('.user-email').textContent = user.email;
                 }
+                return user.id; // Return user ID for filtering data
             } else {
                 console.log("No user session found. Redirecting to login.");
                 window.location.replace("index.html");
+                return null;
             }
         }
 
-            async function fetchStats() {
-        // Example: Fetch total invoices from Supabase
-        const { data, error } = await supabaseClient
-            .from('invoices')
-            .select('*');
-
-        if (error) {
-            console.error('Error fetching invoices:', error);
-            return;
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
         }
 
-        const totalInvoices = data.length;
-        document.querySelectorAll('.stat-value')[0].textContent = totalInvoices;
+        // Format date
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
 
-        // Additional logic for Paid, Pending, Overdue if you track status
-    }
-    await fetchStats();
+        // Calculate time ago
+        function timeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return `${seconds} seconds ago`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+            const days = Math.floor(hours / 24);
+            return `${days} day${days === 1 ? '' : 's'} ago`;
+        }
 
+        // Fetch dashboard statistics
+        async function fetchDashboardStats(userId) {
+            try {
+                // Fetch invoice counts by status
+                const { data: invoices, error: invoiceError } = await supabaseClient
+                    .from('invoices')
+                    .select('status, created_at')
+                    .eq('user_id', userId);
+                
+                if (invoiceError) throw invoiceError;
+                
+                // Calculate counts
+                const totalInvoices = invoices.length;
+                const paidInvoices = invoices.filter(i => i.status === 'paid').length;
+                const pendingInvoices = invoices.filter(i => i.status === 'pending').length;
+                const overdueInvoices = invoices.filter(i => i.status === 'overdue').length;
+                
+                // Calculate percentage changes (simplified - in a real app you'd compare with previous period)
+                const paidPercent = Math.round((paidInvoices / totalInvoices) * 100);
+                const pendingPercent = Math.round((pendingInvoices / totalInvoices) * 100);
+                const overduePercent = Math.round((overdueInvoices / totalInvoices) * 100);
+                
+                // Update UI
+                document.getElementById('total-invoices').textContent = totalInvoices;
+                document.getElementById('paid-invoices').textContent = paidInvoices;
+                document.getElementById('pending-invoices').textContent = pendingInvoices;
+                document.getElementById('overdue-invoices').textContent = overdueInvoices;
+                
+                // Update change indicators
+                document.getElementById('invoice-change').innerHTML = 
+                    `<i class="bi bi-arrow-up"></i> ${totalInvoices > 0 ? 'Active' : 'No invoices yet'}`;
+                document.getElementById('paid-change').innerHTML = 
+                    `<i class="bi bi-arrow-up"></i> ${paidPercent}% of total`;
+                document.getElementById('pending-change').innerHTML = 
+                    `<i class="bi bi-arrow-${pendingInvoices > 0 ? 'up' : 'down'}"></i> ${pendingPercent}% of total`;
+                document.getElementById('overdue-change').innerHTML = 
+                    `<i class="bi bi-arrow-${overdueInvoices > 0 ? 'up' : 'down'}"></i> ${overduePercent}% of total`;
+                
+                // Add appropriate classes for colors
+                document.getElementById('paid-change').className = 'stat-change positive';
+                document.getElementById('pending-change').className = pendingInvoices > 0 ? 'stat-change warning' : 'stat-change';
+                document.getElementById('overdue-change').className = overdueInvoices > 0 ? 'stat-change negative' : 'stat-change';
+                
+            } catch (error) {
+                console.error('Error fetching dashboard stats:', error);
+            }
+        }
+
+        // Fetch recent invoices
+        async function fetchRecentInvoices(userId) {
+            try {
+                const { data: invoices, error } = await supabaseClient
+                    .from('invoices')
+                    .select('id, invoice_number, client_name, amount, due_date, status, created_at')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                const container = document.getElementById('recent-invoices');
+                container.innerHTML = ''; // Clear loading message
+                
+                if (invoices.length === 0) {
+                    container.innerHTML = '<li class="activity-item">No invoices found</li>';
+                    return;
+                }
+                
+                invoices.forEach(invoice => {
+                    const dueDate = new Date(invoice.due_date);
+                    const today = new Date();
+                    const isOverdue = dueDate < today && invoice.status !== 'paid';
+                    const status = isOverdue ? 'overdue' : invoice.status;
+                    
+                    const statusBadges = {
+                        paid: 'bg-success',
+                        pending: 'bg-warning text-dark',
+                        overdue: 'bg-danger',
+                        draft: 'bg-secondary'
+                    };
+                    
+                    const item = document.createElement('li');
+                    item.className = 'activity-item';
+                    item.innerHTML = `
+                        <div class="activity-icon">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">Invoice ${invoice.invoice_number} for ${invoice.client_name}</div>
+                            <div class="activity-time">
+                                ${status === 'paid' ? 
+                                    `Paid on ${formatDate(invoice.created_at)} • ${formatCurrency(invoice.amount)}` : 
+                                    isOverdue ? 
+                                    `Overdue by ${Math.floor((today - dueDate) / (1000 * 60 * 60 * 24))} days • ${formatCurrency(invoice.amount)}` :
+                                    `Due ${formatDate(invoice.due_date)} • ${formatCurrency(invoice.amount)}`
+                                }
+                            </div>
+                        </div>
+                        <span class="badge ${statusBadges[status] || 'bg-secondary'} activity-badge">
+                            ${status.charAt(0).toUpperCase() + status.slice(1)}
+                        </span>
+                    `;
+                    container.appendChild(item);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching recent invoices:', error);
+                document.getElementById('recent-invoices').innerHTML = 
+                    '<li class="activity-item">Error loading invoices</li>';
+            }
+        }
+
+        // Fetch recent activity
+        async function fetchRecentActivity(userId) {
+            try {
+                // In a real app, you might have a separate activities table
+                // For now, we'll simulate with combined data from invoices and other actions
+                
+                // Get recent invoices as activity
+                const { data: invoices, error: invoiceError } = await supabaseClient
+                    .from('invoices')
+                    .select('invoice_number, client_name, status, created_at')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false })
+                    .limit(3);
+                
+                if (invoiceError) throw invoiceError;
+                
+                // Get recent clients as activity (if you have this table)
+                let clients = [];
+                try {
+                    const { data: clientsData, error: clientError } = await supabaseClient
+                        .from('clients')
+                        .select('name, created_at')
+                        .eq('user_id', userId)
+                        .order('created_at', { ascending: false })
+                        .limit(2);
+                    
+                    if (!clientError) clients = clientsData;
+                } catch (e) { console.log('No clients table or error:', e); }
+                
+                // Combine and sort activities
+                const activities = [
+                    ...invoices.map(i => ({
+                        type: 'invoice',
+                        title: `Invoice ${i.invoice_number} ${i.status === 'paid' ? 'marked as paid' : 'created'}`,
+                        date: i.created_at,
+                        icon: i.status === 'paid' ? 'bi-check-circle' : 'bi-file-earmark-text'
+                    })),
+                    ...clients.map(c => ({
+                        type: 'client',
+                        title: `New client added: ${c.name}`,
+                        date: c.created_at,
+                        icon: 'bi-person-plus'
+                    }))
+                ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+                
+                const container = document.getElementById('recent-activity');
+                container.innerHTML = ''; // Clear loading message
+                
+                if (activities.length === 0) {
+                    container.innerHTML = '<li class="activity-item">No recent activity</li>';
+                    return;
+                }
+                
+                activities.forEach(activity => {
+                    const item = document.createElement('li');
+                    item.className = 'activity-item';
+                    item.innerHTML = `
+                        <div class="activity-icon">
+                            <i class="bi ${activity.icon}"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">${activity.title}</div>
+                            <div class="activity-time">${timeAgo(activity.date)}</div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+                
+            } catch (error) {
+                console.error('Error fetching recent activity:', error);
+                document.getElementById('recent-activity').innerHTML = 
+                    '<li class="activity-item">Error loading activity</li>';
+            }
+        }
 
         // Handle logout
         const logoutButton = document.querySelector('.nav-link.text-danger');
@@ -723,7 +843,19 @@
         }
 
         // Initialize the page
-        await checkUserSession();
+        const userId = await checkUserSession();
+        if (userId) {
+            await fetchDashboardStats(userId);
+            await fetchRecentInvoices(userId);
+            await fetchRecentActivity(userId);
+            
+            // Refresh data every 30 seconds (optional)
+            setInterval(async () => {
+                await fetchDashboardStats(userId);
+                await fetchRecentInvoices(userId);
+                await fetchRecentActivity(userId);
+            }, 30000);
+        }
 
         // Sidebar toggle functionality
         const toggleBtn = document.getElementById('toggleSidebar');
@@ -737,6 +869,6 @@
             });
         }
     });
-</script>
+    </script>
 </body>
 </html>
