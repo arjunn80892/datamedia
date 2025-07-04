@@ -585,34 +585,116 @@
     </div>
 
     <script>
-    // Initialize Supabase client
     document.addEventListener('DOMContentLoaded', async () => {
-        const { createClient } = window.supabase;
-        const supabaseClient = createClient(
-            'https://riisjtqzsjebzjanwvgt.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'
-        );
+        // Initialize Supabase
+        const supabaseUrl = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Check user session
-        async function checkUserSession() {
-            const { data: { user }, error } = await supabaseClient.auth.getUser();
-            
-            if (user) {
-                // Update user info in sidebar
-                const userDetails = document.querySelector('.user-details');
-                if (userDetails) {
-                    document.querySelector('.user-name').textContent = user.email.split('@')[0] || 'User';
-                    document.querySelector('.user-email').textContent = user.email;
-                }
-                return user.id; // Return user ID for filtering data
-            } else {
-                console.log("No user session found. Redirecting to login.");
-                window.location.replace("index.html");
+        async function checkSession() {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error) throw error;
+                if (!user) window.location.href = 'index.html';
+                return user;
+            } catch (error) {
+                console.error('Session error:', error.message);
+                window.location.href = 'index.html';
                 return null;
             }
         }
 
-        // Format currency
+        // Fetch invoices with error handling
+        async function fetchInvoices(userId) {
+            try {
+                console.log('Fetching invoices for user:', userId);
+                
+                const { data, error, status } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: false });
+                
+                if (error && status !== 406) throw error;
+                if (!data) throw new Error('No data returned');
+                
+                console.log('Fetched invoices:', data);
+                return data;
+            } catch (error) {
+                console.error('Error fetching invoices:', error.message);
+                showError('Failed to load invoices. Please try again.');
+                return [];
+            }
+        }
+
+        // Display invoices
+        async function displayInvoices() {
+            const user = await checkSession();
+            if (!user) return;
+
+            const invoices = await fetchInvoices(user.id);
+            const container = document.getElementById('recent-invoices');
+            
+            if (!invoices || invoices.length === 0) {
+                container.innerHTML = `
+                    <li class="activity-item">
+                        <div class="activity-icon">
+                            <i class="bi bi-exclamation-circle"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">No invoices found</div>
+                            <div class="activity-time">Create your first invoice</div>
+                        </div>
+                    </li>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            invoices.slice(0, 5).forEach(invoice => {
+                const dueDate = new Date(invoice.due_date);
+                const today = new Date();
+                const isOverdue = dueDate < today && invoice.status !== 'paid';
+                const status = isOverdue ? 'overdue' : (invoice.status || 'draft');
+                
+                const statusClass = {
+                    paid: 'bg-success',
+                    pending: 'bg-warning text-dark',
+                    overdue: 'bg-danger',
+                    draft: 'bg-secondary'
+                }[status] || 'bg-secondary';
+
+                const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+                const clientName = invoice.client_name || 'Unnamed Client';
+                const amount = invoice.amount ? formatCurrency(invoice.amount) : '$0.00';
+                
+                let timeText;
+                if (status === 'paid') {
+                    timeText = `Paid on ${formatDate(invoice.paid_date || invoice.updated_at)} • ${amount}`;
+                } else if (isOverdue) {
+                    const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+                    timeText = `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} • ${amount}`;
+                } else {
+                    timeText = `Due ${formatDate(invoice.due_date)} • ${amount}`;
+                }
+
+                const item = document.createElement('li');
+                item.className = 'activity-item';
+                item.innerHTML = `
+                    <div class="activity-icon">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Invoice ${invoice.invoice_number || invoice.id} for ${clientName}</div>
+                        <div class="activity-time">${timeText}</div>
+                    </div>
+                    <span class="badge ${statusClass} activity-badge">${statusText}</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Helper functions
         function formatCurrency(amount) {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
@@ -620,255 +702,51 @@
             }).format(amount);
         }
 
-        // Format date
         function formatDate(dateString) {
+            if (!dateString) return 'No date';
             const options = { year: 'numeric', month: 'short', day: 'numeric' };
             return new Date(dateString).toLocaleDateString('en-US', options);
         }
 
-        // Calculate time ago
-        function timeAgo(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-            
-            if (seconds < 60) return `${seconds} seconds ago`;
-            const minutes = Math.floor(seconds / 60);
-            if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-            const hours = Math.floor(minutes / 60);
-            if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-            const days = Math.floor(hours / 24);
-            return `${days} day${days === 1 ? '' : 's'} ago`;
+        function showError(message) {
+            const container = document.getElementById('recent-invoices');
+            container.innerHTML = `
+                <li class="activity-item">
+                    <div class="activity-icon text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Error</div>
+                        <div class="activity-time">${message}</div>
+                    </div>
+                </li>`;
         }
 
-        // Fetch dashboard statistics
-        async function fetchDashboardStats(userId) {
+        // Initialize everything
+        async function init() {
             try {
-                // Fetch invoice counts by status
-                const { data: invoices, error: invoiceError } = await supabaseClient
-                    .from('invoices')
-                    .select('status, created_at')
-                    .eq('user_id', userId);
+                await displayInvoices();
                 
-                if (invoiceError) throw invoiceError;
+                // Set up auto-refresh every 30 seconds
+                setInterval(displayInvoices, 30000);
                 
-                // Calculate counts
-                const totalInvoices = invoices.length;
-                const paidInvoices = invoices.filter(i => i.status === 'paid').length;
-                const pendingInvoices = invoices.filter(i => i.status === 'pending').length;
-                const overdueInvoices = invoices.filter(i => i.status === 'overdue').length;
+                // Sidebar toggle
+                const toggleBtn = document.getElementById('toggleSidebar');
+                const sidebar = document.getElementById('sidebar');
+                const mainContent = document.getElementById('mainContent');
                 
-                // Calculate percentage changes (simplified - in a real app you'd compare with previous period)
-                const paidPercent = Math.round((paidInvoices / totalInvoices) * 100);
-                const pendingPercent = Math.round((pendingInvoices / totalInvoices) * 100);
-                const overduePercent = Math.round((overdueInvoices / totalInvoices) * 100);
-                
-                // Update UI
-                document.getElementById('total-invoices').textContent = totalInvoices;
-                document.getElementById('paid-invoices').textContent = paidInvoices;
-                document.getElementById('pending-invoices').textContent = pendingInvoices;
-                document.getElementById('overdue-invoices').textContent = overdueInvoices;
-                
-                // Update change indicators
-                document.getElementById('invoice-change').innerHTML = 
-                    `<i class="bi bi-arrow-up"></i> ${totalInvoices > 0 ? 'Active' : 'No invoices yet'}`;
-                document.getElementById('paid-change').innerHTML = 
-                    `<i class="bi bi-arrow-up"></i> ${paidPercent}% of total`;
-                document.getElementById('pending-change').innerHTML = 
-                    `<i class="bi bi-arrow-${pendingInvoices > 0 ? 'up' : 'down'}"></i> ${pendingPercent}% of total`;
-                document.getElementById('overdue-change').innerHTML = 
-                    `<i class="bi bi-arrow-${overdueInvoices > 0 ? 'up' : 'down'}"></i> ${overduePercent}% of total`;
-                
-                // Add appropriate classes for colors
-                document.getElementById('paid-change').className = 'stat-change positive';
-                document.getElementById('pending-change').className = pendingInvoices > 0 ? 'stat-change warning' : 'stat-change';
-                document.getElementById('overdue-change').className = overdueInvoices > 0 ? 'stat-change negative' : 'stat-change';
-                
+                if (toggleBtn && sidebar && mainContent) {
+                    toggleBtn.addEventListener('click', () => {
+                        sidebar.classList.toggle('sidebar-collapsed');
+                        mainContent.classList.toggle('main-content-collapsed');
+                    });
+                }
             } catch (error) {
-                console.error('Error fetching dashboard stats:', error);
+                console.error('Initialization error:', error);
+                showError('Failed to initialize dashboard');
             }
         }
 
-        // Fetch recent invoices
-        async function fetchRecentInvoices(userId) {
-            try {
-                const { data: invoices, error } = await supabaseClient
-                    .from('invoices')
-                    .select('id, invoice_number, client_name, amount, due_date, status, created_at')
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false })
-                    .limit(5);
-                
-                if (error) throw error;
-                
-                const container = document.getElementById('recent-invoices');
-                container.innerHTML = ''; // Clear loading message
-                
-                if (invoices.length === 0) {
-                    container.innerHTML = '<li class="activity-item">No invoices found</li>';
-                    return;
-                }
-                
-                invoices.forEach(invoice => {
-                    const dueDate = new Date(invoice.due_date);
-                    const today = new Date();
-                    const isOverdue = dueDate < today && invoice.status !== 'paid';
-                    const status = isOverdue ? 'overdue' : invoice.status;
-                    
-                    const statusBadges = {
-                        paid: 'bg-success',
-                        pending: 'bg-warning text-dark',
-                        overdue: 'bg-danger',
-                        draft: 'bg-secondary'
-                    };
-                    
-                    const item = document.createElement('li');
-                    item.className = 'activity-item';
-                    item.innerHTML = `
-                        <div class="activity-icon">
-                            <i class="bi bi-receipt"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">Invoice ${invoice.invoice_number} for ${invoice.client_name}</div>
-                            <div class="activity-time">
-                                ${status === 'paid' ? 
-                                    `Paid on ${formatDate(invoice.created_at)} • ${formatCurrency(invoice.amount)}` : 
-                                    isOverdue ? 
-                                    `Overdue by ${Math.floor((today - dueDate) / (1000 * 60 * 60 * 24))} days • ${formatCurrency(invoice.amount)}` :
-                                    `Due ${formatDate(invoice.due_date)} • ${formatCurrency(invoice.amount)}`
-                                }
-                            </div>
-                        </div>
-                        <span class="badge ${statusBadges[status] || 'bg-secondary'} activity-badge">
-                            ${status.charAt(0).toUpperCase() + status.slice(1)}
-                        </span>
-                    `;
-                    container.appendChild(item);
-                });
-                
-            } catch (error) {
-                console.error('Error fetching recent invoices:', error);
-                document.getElementById('recent-invoices').innerHTML = 
-                    '<li class="activity-item">Error loading invoices</li>';
-            }
-        }
-
-        // Fetch recent activity
-        async function fetchRecentActivity(userId) {
-            try {
-                // In a real app, you might have a separate activities table
-                // For now, we'll simulate with combined data from invoices and other actions
-                
-                // Get recent invoices as activity
-                const { data: invoices, error: invoiceError } = await supabaseClient
-                    .from('invoices')
-                    .select('invoice_number, client_name, status, created_at')
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false })
-                    .limit(3);
-                
-                if (invoiceError) throw invoiceError;
-                
-                // Get recent clients as activity (if you have this table)
-                let clients = [];
-                try {
-                    const { data: clientsData, error: clientError } = await supabaseClient
-                        .from('clients')
-                        .select('name, created_at')
-                        .eq('user_id', userId)
-                        .order('created_at', { ascending: false })
-                        .limit(2);
-                    
-                    if (!clientError) clients = clientsData;
-                } catch (e) { console.log('No clients table or error:', e); }
-                
-                // Combine and sort activities
-                const activities = [
-                    ...invoices.map(i => ({
-                        type: 'invoice',
-                        title: `Invoice ${i.invoice_number} ${i.status === 'paid' ? 'marked as paid' : 'created'}`,
-                        date: i.created_at,
-                        icon: i.status === 'paid' ? 'bi-check-circle' : 'bi-file-earmark-text'
-                    })),
-                    ...clients.map(c => ({
-                        type: 'client',
-                        title: `New client added: ${c.name}`,
-                        date: c.created_at,
-                        icon: 'bi-person-plus'
-                    }))
-                ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
-                
-                const container = document.getElementById('recent-activity');
-                container.innerHTML = ''; // Clear loading message
-                
-                if (activities.length === 0) {
-                    container.innerHTML = '<li class="activity-item">No recent activity</li>';
-                    return;
-                }
-                
-                activities.forEach(activity => {
-                    const item = document.createElement('li');
-                    item.className = 'activity-item';
-                    item.innerHTML = `
-                        <div class="activity-icon">
-                            <i class="bi ${activity.icon}"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">${activity.title}</div>
-                            <div class="activity-time">${timeAgo(activity.date)}</div>
-                        </div>
-                    `;
-                    container.appendChild(item);
-                });
-                
-            } catch (error) {
-                console.error('Error fetching recent activity:', error);
-                document.getElementById('recent-activity').innerHTML = 
-                    '<li class="activity-item">Error loading activity</li>';
-            }
-        }
-
-        // Handle logout
-        const logoutButton = document.querySelector('.nav-link.text-danger');
-        if (logoutButton) {
-            logoutButton.addEventListener('click', async (e) => {
-                e.preventDefault();
-                const { error } = await supabaseClient.auth.signOut();
-                if (error) {
-                    console.error("Error signing out:", error);
-                } else {
-                    window.location.replace("index.html");
-                }
-            });
-        }
-
-        // Initialize the page
-        const userId = await checkUserSession();
-        if (userId) {
-            await fetchDashboardStats(userId);
-            await fetchRecentInvoices(userId);
-            await fetchRecentActivity(userId);
-            
-            // Refresh data every 30 seconds (optional)
-            setInterval(async () => {
-                await fetchDashboardStats(userId);
-                await fetchRecentInvoices(userId);
-                await fetchRecentActivity(userId);
-            }, 30000);
-        }
-
-        // Sidebar toggle functionality
-        const toggleBtn = document.getElementById('toggleSidebar');
-        const sidebar = document.getElementById('sidebar');
-        const mainContent = document.getElementById('mainContent');
-
-        if (toggleBtn && sidebar && mainContent) {
-            toggleBtn.addEventListener('click', () => {
-                sidebar.classList.toggle('sidebar-collapsed');
-                mainContent.classList.toggle('main-content-collapsed');
-            });
-        }
+        init();
     });
-    </script>
-</body>
-</html>
+</script>
