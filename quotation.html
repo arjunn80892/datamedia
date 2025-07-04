@@ -283,7 +283,7 @@ const quotationForm = document.getElementById('quotationForm');
 const quotationIdInput = document.getElementById('quotationId');
 const clientSearchInput = document.getElementById('clientSearchInput');
 const clientSearchResultsContainer = document.getElementById('clientSearchResultsContainer');
-const clientNameInput = document.getElementById('clientName');
+const clientNameInput = document.getElementById('customerName');
 const billingAddressInput = document.getElementById('billingAddress');
 const productSearchInput = document.getElementById('productSearchInput');
 const productSearchResultsContainer = document.getElementById('productSearchResultsContainer');
@@ -304,18 +304,6 @@ const modalText = document.getElementById('modalText');
 const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 const modalCancelBtn = document.getElementById('modalCancelBtn');
 const newQuotationBtn = document.getElementById('newQuotationBtn');
-const backBtn = document.getElementById('backBtn');
-const quotationHistoryBody = document.getElementById('quotationHistoryBody');
-const historyEmptyState = document.getElementById('historyEmptyState');
-const createNewFromHistory = document.getElementById('createNewFromHistory');
-const tabs = document.querySelectorAll('.tab');
-const tabContents = document.querySelectorAll('.tab-content');
-const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-const downloadSelectedExcel = document.getElementById('downloadSelectedExcel');
-const downloadSelectedZip = document.getElementById('downloadSelectedZip');
-const bulkActionSelect = document.getElementById('bulkActionSelect');
-const applyBulkAction = document.getElementById('applyBulkAction');
-
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async function() {
     const { data: { user } } = await supabaseClient.auth.getUser();
@@ -324,7 +312,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     } else {
         document.body.style.visibility = 'visible';
         initializePage();
-        loadQuotationHistory();
     }
 });
 
@@ -1250,12 +1237,6 @@ function setupEventListeners() {
     savedProductsBody.addEventListener('click', handleTableClick);
     saveQuotationBtn.addEventListener('click', () => saveOrUpdateQuotation(true));
     generatePdfBtn.addEventListener('click', generateQuotationPDF);
-    newQuotationBtn.addEventListener('click', newQuotation);
-    backBtn.addEventListener('click', () => window.location.href = "dashboard.html");
-    createNewFromHistory.addEventListener('click', () => {
-        document.querySelector('.tab[data-tab="create"]').click();
-        newQuotation();
-    });
     
     // Modal buttons
     modalConfirmBtn.onclick = () => { 
@@ -1265,33 +1246,6 @@ function setupEventListeners() {
     modalCancelBtn.onclick = () => { 
         confirmModal.style.display = 'none'; 
     };
-    
-    // Bulk actions
-    selectAllCheckbox.addEventListener('change', toggleSelectAll);
-    downloadSelectedExcel.addEventListener('click', downloadSelectedAsExcel);
-    downloadSelectedZip.addEventListener('click', downloadSelectedAsZip);
-    applyBulkAction.addEventListener('click', handleBulkAction);
-    
-    // Tab navigation
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const tabId = tab.dataset.tab;
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            tabContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === `${tabId}-tab`) {
-                    content.classList.add('active');
-                }
-            });
-            
-            if (tabId === 'history' && !isHistoryLoading) {
-                loadQuotationHistory();
-            }
-        });
-    });
 }
 
 function newQuotation() {
