@@ -610,60 +610,6 @@
             }
         }
 
-        // Fetch invoices with error handling
-        async function fetchInvoices(userId) {
-            try {
-                console.log('Fetching invoices for user:', userId);
-                
-                // First try to get table structure
-                const { data: columns, error: columnsError } = await supabase
-                    .from('information_schema.columns')
-                    .select('column_name')
-                    .eq('table_name', 'invoices');
-                
-                if (columnsError) throw columnsError;
-                console.log('Available columns:', columns.map(c => c.column_name));
-                
-                // Try common user reference columns
-                const possibleColumns = ['user_uuid', 'user_id', 'created_by', 'owner_id'];
-                let invoices = [];
-                
-                for (const column of possibleColumns) {
-                    const { data, error } = await supabase
-                        .from('invoices')
-                        .select('*')
-                        .eq(column, userId)
-                        .order('created_at', { ascending: false })
-                        .limit(5);
-                    
-                    if (!error && data && data.length > 0) {
-                        console.log(`Found invoices using column: ${column}`);
-                        invoices = data;
-                        break;
-                    }
-                }
-                
-                if (invoices.length === 0) {
-                    console.log('No invoices found with user reference columns, trying unrestricted query');
-                    const { data, error } = await supabase
-                        .from('invoices')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(5);
-                    
-                    if (error) throw error;
-                    invoices = data;
-                }
-                
-                console.log('Fetched invoices:', invoices);
-                return invoices || [];
-            } catch (error) {
-                console.error('Error fetching invoices:', error.message);
-                showError('Failed to load invoices. Please try again.');
-                return [];
-            }
-        }
-
         // Display invoices
         async function displayInvoices() {
             const user = await checkSession();
