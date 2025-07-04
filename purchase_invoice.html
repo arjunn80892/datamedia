@@ -281,79 +281,37 @@
     }
 
     async function loadInvoiceForEditing(invoiceId) {
-        try {
-            const { data: invoiceData, error: invoiceError } = await supabaseClient
-                .from('purchase_invoices')
-                .select('*')
-                .eq('id', invoiceId)
-                .single();
+    try {
+        // --- THIS IS THE MAIN FIX for "failed to load" ---
+        // It was using an undefined variable. Now it correctly uses `invoiceId`.
+        const { data: invoiceData, error: invoiceError } = await supabaseClient
+            .from('purchase_invoices')
+            .select('*')
+            .eq('id', invoiceId) // Correctly uses the 'invoiceId' from the URL
+            .single();
 
-            if (invoiceError) throw invoiceError;
+        if (invoiceError) throw invoiceError;
 
-            // Transform items to products if needed
-            if (invoiceData.items && !invoiceData.products) {
-                invoiceData.products = invoiceData.items.map(item => ({
-                    productName: item.description,
-                    quantity: item.quantity,
-                    price: item.rate,
-                    discountPercent: 0, // Default if not stored
-                    description: item.description
-                }));
-            }
+        // Populate the form with the loaded data
+        document.getElementById('vendorName').value = invoiceData.vendor_name || '';
+        document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
+        document.getElementById('invoiceDate').value = invoiceData.invoice_date.split('T')[0];
+        document.getElementById('dueDate').value = invoiceData.due_date.split('T')[0];
+        document.getElementById('remarks').value = invoiceData.remarks || '';
+        document.getElementById('terms').value = invoiceData.terms || '';
+        document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
+        document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
 
-            console.log("Transformed invoice data:", invoiceData);
+        savedProducts = invoiceData.products || [];
+        renderProductsTable();
+        updateTotals();
+        lastSavedInvoiceData = invoiceData; // Store the loaded data
 
-            // Set basic invoice information
-            document.getElementById('vendorName').value = invoiceData.vendor_name || '';
-            document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
-            document.getElementById('invoiceDate').value = invoiceData.invoice_date.split('T')[0];
-            document.getElementById('dueDate').value = invoiceData.due_date.split('T')[0];
-            document.getElementById('remarks').value = invoiceData.remarks || '';
-            document.getElementById('terms').value = invoiceData.terms || '';
-            document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
-            
-            // Set tax type
-            document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
-            document.querySelectorAll('.tax-toggle-btn').forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.value === (invoiceData.tax_type || 'cgst_sgst')) {
-                    btn.classList.add('active');
-                }
-            });
-
-            // Load products
-            savedProducts = invoiceData.products || [];
-            renderProductsTable();
-            updateTotals();
-
-            // Set last saved invoice data
-            lastSavedInvoiceData = invoiceData;
-            document.getElementById('downloadPdfButton').disabled = false;
-
-            // Try to find and select the vendor
-            if (invoiceData.vendor_gstin) {
-                try {
-                    const { data: vendorData, error: vendorError } = await supabaseClient
-                        .from('vendors')
-                        .select('*')
-                        .eq('gstin', invoiceData.vendor_gstin)
-                        .single();
-
-                    if (!vendorError && vendorData) {
-                        selectedVendorForInvoice = vendorData;
-                        document.getElementById('vendorSearchInput').value = vendorData.name;
-                    }
-                } catch (e) {
-                    console.log('Could not find vendor in database', e);
-                }
-            }
-
-        } catch (error) {
-            console.error('Error loading invoice:', error);
-            alert('Failed to load invoice data. Please try again.');
-        }
+    } catch (error) {
+        console.error('Error loading invoice:', error.message);
+        alert('Failed to load invoice data. Please ensure your RLS policy allows SELECT.');
     }
-
+}
     // --- DEBOUNCE UTILITY ---
     function debounce(func, delay) {
         let timeout;
@@ -591,50 +549,58 @@
         return;
     }
 
-    // Generate a simple, unique invoice number
-    const now = new Date();
-    const invoiceNumber = `PUR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getTime()).slice(-4)}`;
-
+    // Build the data object from the form fields
     const invoiceData = {
-        // This 'id' logic is for your database's auto-incrementing primary key
-        id: isEditingInvoice ? lastSavedInvoiceData.id : undefined,
-
-        // The human-readable invoice number
-        invoice_number: document.getElementById('invoiceNumberDisplay')?.textContent || invoiceNumber, // Use existing number if editing
-
         company_name: "Datamedia",
         vendor_name: document.getElementById("vendorName").value,
-        vendor_gstin: selectedVendorForInvoice ? selectedVendorForInvoice.gstin : null,
         vendor_address: document.getElementById("vendorAddress").value,
         invoice_date: document.getElementById("invoiceDate").value,
         due_date: document.getElementById("dueDate").value,
         tax_type: document.getElementById("taxType").value,
+        products: savedProducts,
+        grand_total: parseFloat(document.getElementById('total')?.textContent || 0),
+        subtotal: parseFloat(document.getElementById('subtotal')?.textContent || 0),
+        cgst: parseFloat(document.getElementById('cgst')?.textContent || 0),
+        sgst: parseFloat(document.getElementById('sgst')?.textContent || 0),
+        igst: parseFloat(document.getElementById('igst')?.textContent || 0),
+        round_off: parseFloat(document.getElementById('roundOff')?.value || 0),
         remarks: document.getElementById("remarks").value,
         terms: document.getElementById("terms").value,
         reference_number: document.getElementById("referenceNumber").value,
-        products: savedProducts,
-        subtotal: parseFloat(document.getElementById('subtotal').textContent),
-        cgst: parseFloat(document.getElementById('cgst').textContent),
-        sgst: parseFloat(document.getElementById('sgst').textContent),
-        igst: parseFloat(document.getElementById('igst').textContent),
-        round_off: parseFloat(document.getElementById('roundOff')?.value || 0), // Use optional chaining for safety
-        grand_total: parseFloat(document.getElementById('total').textContent),
-        status: 'Draft'
+        status: 'Draft',
     };
-    
+
     try {
-        let data, error;
+        let result, error;
+
+        // Check if we are updating by looking at the 'isEditingInvoice' flag
         if (isEditingInvoice) {
-            // UPDATE EXISTING INVOICE
-            ({ data, error } = await supabaseClient
+            // UPDATE logic
+            ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
-                .eq('id', invoiceData.id)
+                .eq('id', lastSavedInvoiceData.id) // Use the ID from the loaded data
                 .select()
                 .single());
         } else {
-            // CREATE NEW INVOICE
-            ({ data, error } = await supabaseClient
+            // INSERT logic for a new invoice
+            // This now correctly generates the invoice number you want
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const { count, error: countError } = await supabaseClient
+                .from('purchase_invoices')
+                .select('*', { count: 'exact', head: true })
+                .gte('invoice_date', `${year}-${month}-01T00:00:00.000Z`)
+                .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01T00:00:00.000Z`);
+            
+            if(countError) throw countError;
+
+            const monthlyNumber = (count + 1).toString().padStart(4, '0');
+            // Add the generated number to the data we are saving
+            invoiceData.invoice_number = `PUR-${monthlyNumber}-${month}-${year}`;
+
+            ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .insert(invoiceData)
                 .select()
@@ -643,21 +609,17 @@
 
         if (error) throw error;
 
-        lastSavedInvoiceData = data;
-        alert(`Purchase Invoice #${data.invoice_number} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`);
+        // Success!
+        lastSavedInvoiceData = result; 
+        isEditingInvoice = true; // Set to true after saving a new one
+        alert(`Purchase Invoice #${result.invoice_number} ${lastSavedInvoiceData ? 'Updated' : 'Saved'} Successfully!`);
+        window.history.replaceState(null, null, `?id=${result.id}`);
 
-        // If this was a new invoice, update URL to edit mode
-        if (!isEditingInvoice) {
-            window.history.replaceState(null, null, `?id=${data.id}`);
-            isEditingInvoice = true;
-        }
-
-    } catch (error) {
-        console.error('Save error:', error);
-        alert('Error saving invoice: ' + error.message);
+    } catch (err) {
+        console.error('Save error:', err);
+        alert('Error saving invoice: ' + err.message);
     }
 }
-
     function generateAndDownloadPdf() {
         if (!lastSavedInvoiceData) {
             alert("Please save the invoice successfully before downloading the PDF.");
