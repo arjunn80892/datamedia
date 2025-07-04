@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Purchase Invoice History</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    :root {
+      --primary: #4361ee; --secondary: #3f37c9; --danger: #f72585;
+      --success: #4cc9f0; --highlight: #00adb5; --dark: #212529;
+      --light: #f8f9fa; --gray: #6c757d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f5f7fb; color: var(--dark); line-height: 1.6; padding: 20px; visibility: hidden; }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); padding: 30px; }
+    h2 { text-align: center; color: var(--dark); margin-bottom: 1.5rem; font-size: 1.8rem; position: relative; padding-bottom: 0.5rem; }
+    h2::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 3px; background-color: var(--highlight); }
+    .filter-section { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+    .filter-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+    .filter-group { flex: 1; min-width: 200px; }
+    label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--gray); font-size: 0.9rem; }
+    input, select { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; transition: all 0.3s ease; }
+    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1); }
+    .action-buttons { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn {
+      padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 500; cursor: pointer;
+      border: none; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-success { background-color: var(--success); color: white; }
+    .btn-danger { background-color: var(--danger); color: white; }
+    .btn-outline { background-color: transparent; border: 1px solid var(--gray); color: var(--gray); }
+    .btn-icon { font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+    th { background-color: var(--highlight); color: white; font-weight: 500; position: sticky; top: 0; }
+    tr:nth-child(even) { background-color: #f8f9fa; }
+    tr:hover { background-color: #f1f3f5; }
+    .notification {
+      position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white;
+      padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      display: flex; align-items: center; gap: 0.5rem; z-index: 1000; animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @media (max-width: 768px) {
+      .filter-group { min-width: 100%; }
+      .action-buttons { flex-direction: column; }
+      .btn { width: 100%; justify-content: center; }
+      table { display: block; overflow-x: auto; white-space: nowrap;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Purchase Invoice History</h2>
+
+    <div class="filter-section">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="searchInput">Search by Supplier or Ref #</label>
+          <input type="text" id="searchInput" placeholder="Enter supplier name or reference number">
+        </div>
+        <div class="filter-group">
+          <label for="fromDate">From Date</label>
+          <input type="date" id="fromDate">
+        </div>
+        <div class="filter-group">
+          <label for="toDate">To Date</label>
+          <input type="date" id="toDate">
+        </div>
+        <div class="filter-group">
+          <label for="taxFilter">Tax Type</label>
+          <select id="taxFilter">
+            <option value="">All Types</option>
+            <option value="cgst_sgst">CGST + SGST</option>
+            <option value="igst">IGST</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="applyFilterBtn">
+        <i class="fas fa-filter btn-icon"></i> Apply Filters
+      </button>
+       <button class="btn btn-outline" id="resetFilterBtn">
+        <i class="fas fa-undo btn-icon"></i> Reset
+      </button>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-success" id="exportBtn">
+        <i class="fas fa-file-excel"></i> Export to Excel
+      </button>
+      <button class="btn btn-primary" id="downloadSelectedBtn">
+        <i class="fas fa-download"></i> Download Selected PDFs
+      </button>
+      <button class="btn btn-danger" id="deleteSelectedBtn">
+        <i class="fas fa-trash"></i> Delete Selected
+      </button>
+      <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+      </button>
+    </div>
+
+    <table id="purchaseTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="toggleAllCheckbox"></th>
+          <th>Purchase #</th>
+          <th>Date</th>
+          <th>Supplier Name</th>
+          <th>Tax Type</th>
+          <th>Total (₹)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="7" style="text-align:center">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+<script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- GLOBAL STATE ---
+    let allPurchases = [];
+    const { jsPDF } = window.jspdf;
+
+    // --- AUTHENTICATION & INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async () => {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        window.location.href = 'index.html';
+      } else {
+        document.body.style.visibility = 'visible';
+        await fetchPurchases();
+        setupEventListeners();
+      }
+    });
+
+    // --- DATA FETCHING & RENDERING ---
+    async function fetchPurchases() {
+      const tbody = document.querySelector('#purchaseTable tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
+
+      const { data, error } = await supabaseClient
+        .from('purchase_invoices')
+        .select('*')
+        .order('invoice_date', { ascending: false });
+
+      if (error) {
+        console.error("Error loading purchase invoices:", error);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
+        return;
+      }
+
+      allPurchases = data;
+      renderTable(allPurchases);
+    }
+
+    function renderTable(purchasesToRender) {
+      const tbody = document.querySelector('#purchaseTable tbody');
+      tbody.innerHTML = '';
+      if (!purchasesToRender || purchasesToRender.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">No purchase invoices found.</td></tr>`;
+        return;
+      }
+      
+      purchasesToRender.forEach(purchase => {
+        const totalTax = (purchase.cgst || 0) + (purchase.sgst || 0) + (purchase.igst || 0);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
+          <td>PUR-${purchase.id}</td>
+          <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+          <td>${purchase.supplier_name || 'N/A'}</td>
+          <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
+          <td>₹${(purchase.grand_total || 0).toFixed(2)}</td>
+          <td>
+            <button class="btn btn-primary btn-sm" onclick="viewPurchase(${purchase.id})">View/Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deletePurchase(${purchase.id})">Delete</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // --- PURCHASE ACTIONS ---
+    async function deletePurchase(id) {
+        if (!confirm(`Are you sure you want to delete Purchase PUR-${id}? This cannot be undone.`)) return;
+        const { error } = await supabaseClient.from('purchase_invoices').delete().eq('id', id);
+        if (error) {
+            showNotification(`Error: ${error.message}`, 'danger');
+        } else {
+            showNotification(`Purchase PUR-${id} deleted successfully.`, 'success');
+            fetchPurchases();
+        }
+    }
+    
+    async function deleteSelected() {
+        const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+        if (selectedIds.length === 0) {
+            showNotification("No purchase invoices selected.", 'danger');
+            return;
+        }
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected purchase invoice(s)?`)) return;
+        const { error } = await supabaseClient.from('purchase_invoices').delete().in('id', selectedIds);
+        if (error) {
+            showNotification(`Error: ${error.message}`, 'danger');
+        } else {
+            showNotification(`${selectedIds.length} purchase invoice(s) deleted successfully.`, 'success');
+            fetchPurchases();
+        }
+    }
+
+    function exportPurchasesToExcel() {
+      const dataToExport = allPurchases;
+      if (!dataToExport.length) return alert("No purchase invoices to export.");
+      
+      const rows = [["Purchase #", "Date", "Supplier", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
+      dataToExport.forEach(purchase => {
+        const totalTax = (purchase.cgst || 0) + (purchase.sgst || 0) + (purchase.igst || 0);
+        rows.push([
+          `PUR-${purchase.id}`,
+          purchase.invoice_date,
+          purchase.supplier_name,
+          purchase.tax_type,
+          (purchase.subtotal || 0).toFixed(2),
+          totalTax.toFixed(2),
+          (purchase.grand_total || 0).toFixed(2)
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Purchases');
+      XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+    
+    function viewPurchase(id) {
+      window.location.href = `create_purchase.html?edit=${id}`;
+    }
+
+    // --- PDF GENERATION & ZIP DOWNLOAD ---
+    async function generatePurchasePDF(purchase) {
+      const doc = new jsPDF();
+      
+      // Add header
+      doc.setFontSize(20);
+      doc.text('PURCHASE INVOICE', 105, 20, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text(`PUR-${purchase.id}`, 105, 30, { align: 'center' });
+      
+      // Supplier and date info
+      doc.text(`Date: ${new Date(purchase.invoice_date).toLocaleDateString()}`, 15, 40);
+      doc.text(`Supplier: ${purchase.supplier_name}`, 15, 50);
+      
+      // Add line items table
+      doc.autoTable({
+        startY: 60,
+        head: [['Description', 'Quantity', 'Rate', 'Amount']],
+        body: purchase.items.map(item => [
+          item.description,
+          item.quantity,
+          `₹${item.rate.toFixed(2)}`,
+          `₹${(item.quantity * item.rate).toFixed(2)}`
+        ]),
+        margin: { top: 10 }
+      });
+      
+      // Add totals
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.text(`Subtotal: ₹${purchase.subtotal.toFixed(2)}`, 150, finalY);
+      if (purchase.tax_type === 'cgst_sgst') {
+        doc.text(`CGST (${purchase.cgst_rate}%): ₹${purchase.cgst.toFixed(2)}`, 150, finalY + 10);
+        doc.text(`SGST (${purchase.sgst_rate}%): ₹${purchase.sgst.toFixed(2)}`, 150, finalY + 20);
+      } else {
+        doc.text(`IGST (${purchase.igst_rate}%): ₹${purchase.igst.toFixed(2)}`, 150, finalY + 10);
+      }
+      doc.text(`Grand Total: ₹${purchase.grand_total.toFixed(2)}`, 150, finalY + 30);
+      
+      return doc.output('blob');
+    }
+
+    async function downloadSelectedPurchases() {
+      const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+      if (selectedIds.length === 0) {
+        showNotification("No purchase invoices selected.", 'danger');
+        return;
+      }
+
+      showNotification(`Preparing ${selectedIds.length} purchase invoice(s) for download...`, 'info');
+      
+      try {
+        const zip = new JSZip();
+        const { data: purchases, error } = await supabaseClient
+          .from('purchase_invoices')
+          .select('*')
+          .in('id', selectedIds);
+        
+        if (error) throw error;
+        
+        for (const purchase of purchases) {
+          const pdfBlob = await generatePurchasePDF(purchase);
+          zip.file(`PUR-${purchase.id}.pdf`, pdfBlob);
+        }
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, `purchases_${new Date().toISOString().slice(0,10)}.zip`);
+        showNotification(`${selectedIds.length} purchase invoice(s) downloaded successfully.`, 'success');
+      } catch (error) {
+        console.error("Error generating ZIP:", error);
+        showNotification(`Error: ${error.message}`, 'danger');
+      }
+    }
+
+    // --- FILTERING LOGIC ---
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const from = document.getElementById('fromDate').value;
+      const to = document.getElementById('toDate').value;
+      const tax = document.getElementById('taxFilter').value;
+
+      const filtered = allPurchases.filter(purchase => {
+        const date = purchase.invoice_date;
+        const dateValid = (!from || date >= from) && (!to || date <= to);
+        const textMatch = (purchase.supplier_name || '').toLowerCase().includes(search) || `pur-${purchase.id}`.includes(search);
+        const taxMatch = !tax || purchase.tax_type === tax;
+        return dateValid && textMatch && taxMatch;
+      });
+      renderTable(filtered);
+    }
+    
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+        document.getElementById('taxFilter').value = '';
+        renderTable(allPurchases);
+    }
+
+    // --- UTILITY FUNCTIONS ---
+    function showNotification(message, type = 'success') {
+      const div = document.createElement('div');
+      div.className = `notification`;
+      div.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+      div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+      document.body.appendChild(div);
+      setTimeout(() => {
+        div.style.opacity = '0';
+        setTimeout(() => div.remove(), 300);
+      }, 3000);
+    }
+
+    // --- EVENT LISTENERS ---
+    function setupEventListeners() {
+      document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
+      document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
+      document.getElementById('exportBtn').addEventListener('click', exportPurchasesToExcel);
+      document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedPurchases);
+      document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+      document.getElementById('toggleAllCheckbox').addEventListener('click', (e) => {
+          document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = e.target.checked);
+      });
+    }
+    
+    // Make functions accessible from HTML onclick attributes
+    window.viewPurchase = viewPurchase;
+    window.deletePurchase = deletePurchase;
+    window.downloadSelectedPurchases = downloadSelectedPurchases;
+
+</script>
+</body>
+</html>

@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Purchase Invoice</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --primary: #4361ee; --primary-light: #e6f0ff; --secondary: #3f37c9;
+      --success: #4cc9f0; --danger: #f72585; --warning: #f8961e;
+      --dark: #212529; --light: #f8f9fa; --gray: #6c757d;
+      --border: #dee2e6; --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.1); --radius: 8px; --radius-sm: 4px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif; background-color: #f5f7fb;
+      color: var(--dark); line-height: 1.6; padding: 20px;
+      visibility: hidden; /* Hide until auth check is complete */
+    }
+    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: var(--radius); box-shadow: var(--shadow-md); padding: 30px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .header h2 { color: var(--primary); font-weight: 600; }
+    .header-actions { display: flex; gap: 10px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: 500; color: var(--dark); font-size: 14px; }
+    .form-control {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 14px; transition: border-color 0.2s; background-color: white;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+    select.form-control {
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat; background-position: right 10px center; background-size: 16px;
+    }
+    textarea.form-control { min-height: 80px; resize: vertical; }
+    .product-section { margin-top: 30px; background-color: var(--light); padding: 20px; border-radius: var(--radius); }
+    .product-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .product-row-header { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px;
+      border-radius: var(--radius-sm); font-weight: 500; font-size: 14px;
+      cursor: pointer; transition: all 0.2s; border: none; gap: 6px;
+    }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-sm { padding: 8px 12px; font-size: 13px; }
+    .btn-primary { background-color: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background-color: var(--secondary); }
+    .btn-success { background-color: var(--success); color: white; }
+    .btn-success:hover:not(:disabled) { background-color: #2ab8be; }
+    .btn-danger { background-color: var(--danger); color: white; }
+    .btn-danger:hover:not(:disabled) { background-color: #d90429; }
+    .btn-light { background-color: var(--light); color: var(--dark); }
+    .btn-light:hover { background-color: #e9ecef; }
+    .totals-section { margin-top: 30px; background-color: var(--primary-light); padding: 20px; border-radius: var(--radius); }
+    .totals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+    .total-item { display: flex; flex-direction: column; }
+    .total-label { font-size: 14px; color: var(--gray); }
+    .total-value { font-size: 18px; font-weight: 600; color: var(--dark); }
+    .total-value.grand-total { color: var(--primary); font-size: 22px; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th { background-color: var(--primary); color: white; padding: 12px; text-align: left; font-weight: 500; }
+    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:hover { background-color: var(--light); }
+    .actions-section { display: flex; justify-content: flex-end; gap: 15px; margin-top: 30px; align-items: center; }
+    .hidden { display: none; }
+    .tax-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 15px; }
+    .tax-toggle-btn { flex: 1; padding: 8px 12px; text-align: center; cursor: pointer; background-color: white; border: none; transition: all 0.2s; }
+    .tax-toggle-btn.active { background-color: var(--primary); color: white; }
+    #statusMessage { font-size: 14px; font-weight: 500; margin-right: auto; }
+    .status-success { color: green; }
+    .status-error { color: var(--danger); }
+    .search-container { position: relative; }
+    .search-results-container {
+        display: none; position: absolute; top: 100%; left: 0; right: 0; background: white;
+        border: 1px solid #ccc; max-height: 250px; overflow-y: auto; z-index: 100;
+        border-radius: 0 0 8px 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .search-result-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; }
+    .search-result-item:hover { background-color: #f0f8ff; }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item strong { color: var(--highlight); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="header">
+      <h2>Create Purchase Invoice</h2>
+      <div class="header-actions">
+        <button class="btn btn-light" onclick="window.location.href='dashboard.html'">Back to Dashboard</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="form-group">
+        <label for="companyName">Company</label>
+        <input type="text" id="companyName" class="form-control" value="Datamedia" disabled>
+      </div>
+      <div class="form-group search-container">
+        <label for="vendorSearchInput">Search Vendor</label>
+        <input type="text" id="vendorSearchInput" class="form-control" placeholder="Start typing vendor name...">
+        <div id="vendorSearchResults" class="search-results-container"></div>
+      </div>
+       <div class="form-group">
+        <label for="branchSelect">Branch</label>
+        <select id="branchSelect" class="form-control">
+            <option value="">Select Branch</option>
+            <option value="Main Branch">Main Branch</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div class="form-group">
+        <label for="vendorName">Vendor Name</label>
+        <input type="text" id="vendorName" class="form-control" placeholder="Auto-filled from search">
+      </div>
+      <div class="form-group">
+        <label for="referenceNumber">Supplier's Reference</label>
+        <input type="text" id="referenceNumber" class="form-control" placeholder="Optional reference number">
+      </div>
+      <div class="form-group">
+        <label for="vendorAddress">Vendor Address</label>
+        <textarea id="vendorAddress" class="form-control" rows="2"></textarea>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="form-group">
+        <label for="invoiceDate">Invoice Date</label>
+        <input type="date" id="invoiceDate" class="form-control">
+      </div>
+       <div class="form-group">
+        <label for="dueDate">Due Date</label>
+        <input type="date" id="dueDate" class="form-control">
+      </div>
+      <div class="form-group">
+        <label>Tax Type</label>
+        <div class="tax-toggle">
+            <button type="button" class="tax-toggle-btn active" data-value="cgst_sgst" onclick="toggleTaxType(this)">CGST + SGST</button>
+            <button type="button" class="tax-toggle-btn" data-value="igst" onclick="toggleTaxType(this)">IGST</button>
+        </div>
+        <input type="hidden" id="taxType" value="cgst_sgst">
+      </div>
+    </div>
+
+
+    <div class="product-section">
+      <h3 style="margin-bottom: 20px;">Products/Services</h3>
+      <div class="search-container">
+        <label for="productSearchInput">Search Product</label>
+        <input type="text" id="productSearchInput" class="form-control" placeholder="Start typing product name or code..." disabled>
+        <div id="productSearchResults" class="search-results-container"></div>
+      </div>
+      <hr style="margin: 20px 0; border:none; border-top: 1px solid #ddd;">
+      <div class="product-row product-row-header">
+        <div>Category</div>
+        <div>Brand</div>
+        <div>Qty</div>
+        <div>Price</div>
+        <div>Discount %</div>
+        <div>Description</div>
+        <div>Action</div>
+      </div>
+      <div class="product-row">
+        <input type="text" id="category" class="form-control" placeholder="Category">
+        <input type="text" id="brand" class="form-control" placeholder="Brand">
+        <input type="number" id="quantity" class="form-control" min="1" value="1">
+        <input type="number" id="price" class="form-control" step="0.01" placeholder="0.00">
+        <input type="number" id="discount" class="form-control" min="0" max="100" value="0">
+        <textarea id="productDescription" class="form-control" rows="1" placeholder="Description"></textarea>
+        <button class="btn btn-primary" onclick="addProduct()">Add</button>
+      </div>
+    </div>
+
+    <table id="savedProductsTable" class="hidden">
+      <thead>
+        <tr>
+          <th>Product Name</th>
+          <th>Qty</th>
+          <th>Price</th>
+          <th>Discount</th>
+          <th>Total</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="savedProductsBody"></tbody>
+    </table>
+
+    <div class="totals-section">
+      <div class="totals-grid">
+        <div class="total-item"><span class="total-label">Subtotal</span><span class="total-value">₹<span id="subtotal">0.00</span></span></div>
+        <div class="total-item" id="cgstRow"><span class="total-label">CGST (9%)</span><span class="total-value">₹<span id="cgst">0.00</span></span></div>
+        <div class="total-item" id="sgstRow"><span class="total-label">SGST (9%)</span><span class="total-value">₹<span id="sgst">0.00</span></span></div>
+        <div class="total-item hidden" id="igstRow"><span class="total-label">IGST (18%)</span><span class="total-value">₹<span id="igst">0.00</span></span></div>
+        <div class="total-item">
+          <span class="total-label">Round Off</span>
+          <span class="total-value">₹<input type="text" id="roundOff" value="0.00" readonly style="border: none; background: transparent; width: 60px; font-size: 18px; font-weight: 600; color: var(--dark); padding: 0;"></span>
+        </div>
+        <div class="total-item"><span class="total-label">Total</span><span class="total-value grand-total">₹<span id="total">0.00</span></span></div>
+      </div>
+    </div>
+    
+    <div class="grid" style="margin-top: 20px;">
+        <div class="form-group">
+            <label for="remarks">Remarks</label>
+            <textarea id="remarks" class="form-control" rows="3"></textarea>
+        </div>
+        <div class="form-group">
+            <label for="terms">Terms & Conditions</label>
+            <textarea id="terms" class="form-control" rows="3"></textarea>
+        </div>
+    </div>
+
+    <div class="actions-section">
+      <div id="statusMessage"></div>
+      <button class="btn btn-danger" onclick="location.reload()">Cancel</button>
+      <button id="saveButton" class="btn btn-success" onclick="saveInvoiceData()">Save Invoice</button>
+      <button id="downloadPdfButton" class="btn btn-primary" onclick="generateAndDownloadPdf()" disabled>Download PDF</button>
+    </div>
+  </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+    // --- SUPABASE CONFIGURATION ---
+    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // --- GLOBAL STATE ---
+    let savedProducts = [];
+    let lastSavedInvoiceData = null; 
+    let selectedProductForAdding = null;
+    let selectedVendorForInvoice = null;
+    let isEditingInvoice = false;
+    let nextPurchaseInvoiceNumber = 1;
+
+    // --- AUTHENTICATION & INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async function() {
+      const { data: { user } } = await supabaseClient.auth.getUser();
+      if (!user) {
+        window.location.href = 'index.html';
+      } else {
+        document.body.style.visibility = 'visible';
+        await initializePage();
+      }
+    });
+
+    async function initializePage() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('invoiceDate').value = today;
+        document.getElementById('dueDate').value = today;
+        setupEventListeners();
+
+        // Get the latest purchase invoice number
+        const { data: lastInvoice, error } = await supabaseClient
+            .from('purchase_invoices')
+            .select('invoice_number')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (!error && lastInvoice.length > 0) {
+            const lastNumber = parseInt(lastInvoice[0].invoice_number.split('-')[2]) || 0;
+            nextPurchaseInvoiceNumber = lastNumber + 1;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const invoiceId = urlParams.get('edit') || urlParams.get('id');
+
+        if (invoiceId) {
+            isEditingInvoice = true;
+            await loadInvoiceForEditing(invoiceId);
+        }
+    }
+
+    async function loadInvoiceForEditing(invoiceId) {
+        try {
+            const { data: invoiceData, error: invoiceError } = await supabaseClient
+                .from('purchase_invoices')
+                .select('*')
+                .eq('id', invoiceId)
+                .single();
+
+            if (invoiceError) throw invoiceError;
+
+            // Transform items to products if needed
+            if (invoiceData.items && !invoiceData.products) {
+                invoiceData.products = invoiceData.items.map(item => ({
+                    productName: item.description,
+                    quantity: item.quantity,
+                    price: item.rate,
+                    discountPercent: 0, // Default if not stored
+                    description: item.description
+                }));
+            }
+
+            console.log("Transformed invoice data:", invoiceData);
+
+            // Set basic invoice information
+            document.getElementById('vendorName').value = invoiceData.vendor_name || '';
+            document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
+            document.getElementById('invoiceDate').value = invoiceData.invoice_date.split('T')[0];
+            document.getElementById('dueDate').value = invoiceData.due_date.split('T')[0];
+            document.getElementById('remarks').value = invoiceData.remarks || '';
+            document.getElementById('terms').value = invoiceData.terms || '';
+            document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
+            
+            // Set tax type
+            document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
+            document.querySelectorAll('.tax-toggle-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.value === (invoiceData.tax_type || 'cgst_sgst')) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // Load products
+            savedProducts = invoiceData.products || [];
+            renderProductsTable();
+            updateTotals();
+
+            // Set last saved invoice data
+            lastSavedInvoiceData = invoiceData;
+            document.getElementById('downloadPdfButton').disabled = false;
+
+            // Try to find and select the vendor
+            if (invoiceData.vendor_gstin) {
+                try {
+                    const { data: vendorData, error: vendorError } = await supabaseClient
+                        .from('vendors')
+                        .select('*')
+                        .eq('gstin', invoiceData.vendor_gstin)
+                        .single();
+
+                    if (!vendorError && vendorData) {
+                        selectedVendorForInvoice = vendorData;
+                        document.getElementById('vendorSearchInput').value = vendorData.name;
+                    }
+                } catch (e) {
+                    console.log('Could not find vendor in database', e);
+                }
+            }
+
+        } catch (error) {
+            console.error('Error loading invoice:', error);
+            alert('Failed to load invoice data. Please try again.');
+        }
+    }
+
+    // --- DEBOUNCE UTILITY ---
+    function debounce(func, delay) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
+
+    // --- SEARCH & DATA FETCHING ---
+    const debouncedVendorSearch = debounce(async (query) => {
+        const resultsContainer = document.getElementById('vendorSearchResults');
+        if (query.length < 1) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+        const { data, error } = await supabaseClient
+            .from('vendors')
+            .select('id, name, address, phone, gstin')
+            .ilike('name', `%${query}%`);
+
+        resultsContainer.innerHTML = '';
+        if (error || !data.length) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+        
+        data.forEach(vendor => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.textContent = `${vendor.name} (${vendor.phone || 'No Phone'})`;
+            item.onclick = () => selectVendor(vendor);
+            resultsContainer.appendChild(item);
+        });
+        resultsContainer.style.display = 'block';
+    }, 300);
+
+    const debouncedProductSearch = debounce(async (query) => {
+        const resultsContainer = document.getElementById('productSearchResults');
+        if (query.length < 1) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .or(`name.ilike.%${query}%,code.ilike.%${query}%`);
+
+        resultsContainer.innerHTML = '';
+        if (error || !data.length) {
+            resultsContainer.style.display = 'none';
+            return;
+        }
+
+        data.forEach(product => {
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.textContent = `${product.name} (${product.brand || 'N/A'})`;
+            item.onclick = () => selectProduct(product);
+            resultsContainer.appendChild(item);
+        });
+        resultsContainer.style.display = 'block';
+    }, 300);
+
+    function selectVendor(vendor) {
+        selectedVendorForInvoice = vendor;
+        document.getElementById('vendorSearchInput').value = vendor.name;
+        document.getElementById('vendorName').value = vendor.name;
+        document.getElementById('vendorAddress').value = vendor.address || '';
+        document.getElementById('vendorSearchResults').style.display = 'none';
+    }
+
+    function selectProduct(product) {
+        selectedProductForAdding = product;
+        document.getElementById('productSearchInput').value = product.name;
+        document.getElementById('price').value = product.price || 0;
+        document.getElementById('productDescription').value = product.description || '';
+        document.getElementById('category').value = product.category || '';
+        document.getElementById('brand').value = product.brand || '';
+        document.getElementById('productSearchResults').style.display = 'none';
+    }
+
+    // --- EVENT HANDLERS & SETUP ---
+    function toggleTaxType(element) {
+        document.querySelectorAll('.tax-toggle-btn').forEach(btn => btn.classList.remove('active'));
+        element.classList.add('active');
+        document.getElementById('taxType').value = element.dataset.value;
+        updateTotals();
+    }
+    
+    function setupEventListeners() {
+        document.getElementById('vendorSearchInput').addEventListener('keyup', (e) => debouncedVendorSearch(e.target.value));
+        document.getElementById('productSearchInput').addEventListener('keyup', (e) => debouncedProductSearch(e.target.value));
+        document.getElementById('productSearchInput').disabled = false;
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('vendorSearchResults').style.display = 'none';
+                document.getElementById('productSearchResults').style.display = 'none';
+            }
+        });
+    }
+
+    // --- PRODUCT & INVOICE LOGIC ---
+    function addProduct() {
+      const quantity = parseFloat(document.getElementById("quantity").value) || 0;
+      const price = parseFloat(document.getElementById("price").value) || 0;
+      
+      if (!selectedProductForAdding || quantity <= 0 || price < 0) {
+        alert("Please search and select a product, and enter a valid quantity and price.");
+        return;
+      }
+      
+      const product = {
+        productName: selectedProductForAdding.name,
+        category: document.getElementById("category").value,
+        brand: document.getElementById("brand").value,
+        description: document.getElementById("productDescription").value.trim(),
+        quantity: quantity,
+        price: price,
+        discountPercent: parseFloat(document.getElementById("discount").value) || 0,
+      };
+
+      savedProducts.push(product);
+      renderProductsTable();
+      updateTotals();
+      clearProductInputs();
+      document.getElementById('downloadPdfButton').disabled = true;
+    }
+    
+    function deleteProduct(index) {
+        savedProducts.splice(index, 1);
+        renderProductsTable();
+        updateTotals();
+        document.getElementById('downloadPdfButton').disabled = true;
+    }
+
+    function editProduct(index) {
+        const productToEdit = savedProducts[index];
+        
+        document.getElementById('productSearchInput').value = productToEdit.productName;
+        document.getElementById('category').value = productToEdit.category;
+        document.getElementById('brand').value = productToEdit.brand;
+        document.getElementById("quantity").value = productToEdit.quantity;
+        document.getElementById("price").value = productToEdit.price;
+        document.getElementById("discount").value = productToEdit.discountPercent;
+        document.getElementById("productDescription").value = productToEdit.description;
+        
+        selectedProductForAdding = { name: productToEdit.productName };
+        
+        deleteProduct(index);
+    }
+    
+    function renderProductsTable() {
+      const table = document.getElementById("savedProductsTable");
+      const tbody = document.getElementById("savedProductsBody");
+      tbody.innerHTML = '';
+      
+      if (savedProducts.length === 0) {
+        table.classList.add("hidden");
+        return;
+      }
+      table.classList.remove("hidden");
+
+      savedProducts.forEach((product, index) => {
+        const tr = document.createElement("tr");
+        let discountedPrice = product.price * (1 - product.discountPercent / 100);
+        let total = discountedPrice * product.quantity;
+        
+        tr.innerHTML = `
+          <td>${product.productName}${product.description ? `<br><small style="color:var(--gray)">${product.description}</small>` : ''}</td>
+          <td>${product.quantity}</td>
+          <td>${product.price.toFixed(2)}</td>
+          <td>${product.discountPercent}%</td>
+          <td>${total.toFixed(2)}</td>
+          <td>
+            <div class="btn-group">
+                <button class="btn btn-warning btn-sm" onclick="editProduct(${index})">Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct(${index})">Delete</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateTotals() {
+      let subtotal = savedProducts.reduce((sum, p) => {
+          let discountedPrice = p.price * (1 - p.discountPercent / 100);
+          return sum + (discountedPrice * p.quantity);
+      }, 0);
+      
+      const taxType = document.getElementById("taxType").value;
+      let cgst = 0, sgst = 0, igst = 0;
+      
+      if (taxType === "cgst_sgst") {
+        cgst = subtotal * 0.09;
+        sgst = subtotal * 0.09;
+        document.getElementById("cgstRow").classList.remove("hidden");
+        document.getElementById("sgstRow").classList.remove("hidden");
+        document.getElementById("igstRow").classList.add("hidden");
+      } else {
+        igst = subtotal * 0.18;
+        document.getElementById("cgstRow").classList.add("hidden");
+        document.getElementById("sgstRow").classList.add("hidden");
+        document.getElementById("igstRow").classList.remove("hidden");
+      }
+      
+      let totalBeforeRound = subtotal + cgst + sgst + igst;
+      const roundedTotal = Math.round(totalBeforeRound);
+      const roundOff = roundedTotal - totalBeforeRound;
+
+      document.getElementById("subtotal").textContent = subtotal.toFixed(2);
+      document.getElementById("cgst").textContent = cgst.toFixed(2);
+      document.getElementById("sgst").textContent = sgst.toFixed(2);
+      document.getElementById("igst").textContent = igst.toFixed(2);
+      document.getElementById("roundOff").value = roundOff.toFixed(2);
+      document.getElementById("total").textContent = roundedTotal.toFixed(2);
+    }
+    
+    function clearProductInputs() {
+      document.getElementById("productSearchInput").value = "";
+      document.getElementById("category").value = "";
+      document.getElementById("brand").value = "";
+      document.getElementById("productDescription").value = "";
+      document.getElementById("quantity").value = 1;
+      document.getElementById("price").value = "";
+      document.getElementById("discount").value = 0;
+      selectedProductForAdding = null;
+    }
+
+    // --- DATA SAVING & PDF GENERATION ---
+    async function saveInvoiceData() {
+        const saveButton = document.getElementById('saveButton');
+        const downloadButton = document.getElementById('downloadPdfButton');
+        const statusMessage = document.getElementById('statusMessage');
+
+        if (savedProducts.length === 0) {
+            statusMessage.textContent = "Please add at least one product before saving.";
+            statusMessage.className = 'status-error';
+            return;
+        }
+
+        saveButton.disabled = true;
+        downloadButton.disabled = true;
+        saveButton.textContent = 'Saving...';
+        statusMessage.textContent = '';
+
+        
+                const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+
+        // Get count of existing invoices for this month & year
+        const { data: existingInvoices, error: countError } = await supabaseClient
+        .from('purchase_invoices')
+        .select('id', { count: 'exact' })
+        .gte('invoice_date', `${year}-${month}-01`)
+        .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`);
+
+        if (countError) {
+            console.error("Error getting monthly count", countError);
+            throw countError;
+        }
+
+        const monthlyNumber = ((existingInvoices?.length || 0) + 1).toString().padStart(4, '0');
+        const invoiceNumber = `PUR-${monthlyNumber}-${month}-${year}`;
+
+        const invoiceData = {
+            company_name: "Datamedia",
+            vendor_name: document.getElementById("vendorName").value,
+            vendor_gstin: selectedVendorForInvoice ? selectedVendorForInvoice.gstin : null,
+            branch_name: document.getElementById("branchSelect").value,
+            vendor_address: document.getElementById("vendorAddress").value,
+            invoice_date: document.getElementById("invoiceDate").value,
+            due_date: document.getElementById("dueDate").value,
+            tax_type: document.getElementById("taxType").value,
+            remarks: document.getElementById("remarks").value,
+            terms: document.getElementById("terms").value,
+            reference_number: document.getElementById("referenceNumber").value,
+            products: savedProducts,
+            subtotal: parseFloat(document.getElementById('subtotal').textContent),
+            cgst: parseFloat(document.getElementById('cgst').textContent),
+            sgst: parseFloat(document.getElementById('sgst').textContent),
+            igst: parseFloat(document.getElementById('igst').textContent),
+            round_off: parseFloat(document.getElementById('roundOff').value),
+            grand_total: parseFloat(document.getElementById('total').textContent),
+            status: 'Draft',
+            invoice_number: invoiceNumber
+        };
+
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const invoiceId = urlParams.get('edit') || urlParams.get('id');
+
+            let data, error;
+
+            if (isEditingInvoice && invoiceId) {
+                    // ✅ UPDATE EXISTING INVOICE
+                    ({ data, error } = await supabaseClient
+                        .from('purchase_invoices')
+                        .update(invoiceData)
+                        .eq('id', invoiceId)
+                        .select()
+                        .single());
+
+                    if (!error && data) {
+                        const autoId = data.invoice_number_id;
+                        const invoiceNumber = `PUR-${new Date().getFullYear()}-${autoId.toString().padStart(4, '0')}`;
+
+                        // Now update the row with the generated invoice number
+                        await supabaseClient
+                            .from('purchase_invoices')
+                            .update({ invoice_number: invoiceNumber })
+                            .eq('id', data.id);
+
+                        data.invoice_number = invoiceNumber; // Add this for use in UI/alerts
+                        }
+
+            } else {
+                // CREATE NEW INVOICE
+                ({ data, error } = await supabaseClient
+                    .from('purchase_invoices')
+                    .insert(invoiceData)
+                    .select()
+                    .single());
+                
+                // Increment invoice number only for new invoices
+                if (!error) nextPurchaseInvoiceNumber++;
+            }
+
+            if (error) throw error;
+
+            lastSavedInvoiceData = data;
+            statusMessage.textContent = `Purchase Invoice #${data.invoice_number} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`;
+            statusMessage.className = 'status-success';
+            downloadButton.disabled = false;
+
+            // If this was a new invoice, update URL to edit mode
+            if (!isEditingInvoice) {
+                window.history.replaceState(null, null, `?edit=${data.id}`);
+                isEditingInvoice = true;
+            }
+        } catch (error) {
+            console.error('Save error:', error);
+            statusMessage.textContent = 'Error: ' + error.message;
+            statusMessage.className = 'status-error';
+        } finally {
+            saveButton.disabled = false;
+            saveButton.textContent = isEditingInvoice ? 'Update Invoice' : 'Save Invoice';
+        }
+    }
+
+    function generateAndDownloadPdf() {
+        if (!lastSavedInvoiceData) {
+            alert("Please save the invoice successfully before downloading the PDF.");
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        const data = lastSavedInvoiceData;
+        
+        try {if (logoBase64 && logoBase64.startsWith('data:image')) {
+            doc.addImage(logoBase64, 'PNG', 165, 3, 45, 26);
+            }
+        } catch (e) { console.error("Could not add logo.", e); }
+        
+        const companyName = "Datamedia";
+        const address = "Souparnika Building, Varanadu, Cherthala, Kerala 32";
+        const pincode = "688524";
+        const gstin = "32AJGPB3172R1Z4";
+        const phone = "8590444144,9447123813";
+        
+        const vendorName = data.vendor_name || "-";
+        const vendorAddress = data.vendor_address || "-";
+        const invoiceDate = new Date(data.invoice_date).toLocaleDateString('en-IN');
+        const invoiceNumber = data.invoice_number;
+        const referenceNumber = data.reference_number || "-";
+        
+        doc.setFontSize(16).text("PURCHASE INVOICE", 105, 15, { align: "center" });
+        
+        let startY = 30;
+        doc.setFontSize(13).setFont(undefined, 'bold').text(companyName, 14, startY);
+        doc.setFontSize(10).setFont(undefined, 'normal');
+        doc.text(address, 14, startY + 5);
+        doc.text("Pincode: " + pincode, 14, startY + 10);
+        doc.text("GSTIN: " + gstin, 14, startY + 15);
+        doc.text("Phone: " + phone, 14, startY + 20);
+        doc.text(`Supplier Reference: ${referenceNumber}`, 14, startY + 25);
+
+        doc.setFontSize(10).setFont(undefined, 'bold');
+        doc.text(`Invoice No: ${invoiceNumber}`, 14, startY + 35);
+        doc.text("Date: " + invoiceDate, 14, startY + 40);
+        
+        doc.setFontSize(12).setFont(undefined, 'bold').text("Vendor Details", 150, startY);
+        doc.setFontSize(10).setFont(undefined, 'normal');
+        doc.text(vendorName, 150, startY + 5);
+
+        const wrappedAddress = doc.splitTextToSize("Address: " + vendorAddress, 50);
+        const addressHeight = wrappedAddress.length * 5;
+        doc.text(wrappedAddress, 150, startY + 10);
+        
+        let gstinY = startY + 10 + addressHeight;
+        doc.text(`GSTIN: ${data.vendor_gstin || '-'}`, 150, gstinY);
+
+        let tableStartY = Math.max(startY + 45, gstinY + 10);
+
+        const tableBody = data.products.map((product, i) => {
+            let discountedPrice = product.price * (1 - product.discountPercent / 100);
+            let total = discountedPrice * product.quantity;
+            let p_cgst = 0, p_sgst = 0, p_igst = 0;
+            if (data.tax_type === "cgst_sgst") {
+                p_cgst = total * 0.09;
+                p_sgst = total * 0.09;
+            } else {
+                p_igst = total * 0.18;
+            }
+            return [
+                i + 1,
+                `${product.productName}${product.description ? `\nDesc: ${product.description}` : ''}`,
+                product.quantity,
+                product.price.toFixed(2),
+                product.discountPercent + "%",
+                p_cgst.toFixed(2),
+                p_sgst.toFixed(2),
+                p_igst.toFixed(2),
+                (total + p_cgst + p_sgst + p_igst).toFixed(2),
+            ];
+        });
+
+        doc.autoTable({
+            startY: tableStartY,
+            head: [["#", "Product", "Qty", "Price", "Disc", "CGST", "SGST", "IGST", "Total"]],
+            body: tableBody,
+            styles: { fontSize: 9, overflow: 'linebreak', cellPadding: 2, valign: 'top' },
+            columnStyles: { 1: { cellWidth: 50 } }
+        });
+
+        let finalY = doc.lastAutoTable.finalY;
+        const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+        const requiredSpaceForFooter = 110;
+
+        if (finalY > pageHeight - requiredSpaceForFooter) {
+            doc.addPage();
+            finalY = 20;
+        } else {
+            finalY += 10;
+        }
+
+        doc.setFontSize(9).setFont(undefined, 'bold').text("Amount in Words: " + toWords(data.grand_total), 196, finalY, { align:"right" });
+
+        const totalsBody = [
+            ['Subtotal:', `RS ${data.subtotal.toFixed(2)}`],
+            ['CGST (9%):', `RS ${data.cgst.toFixed(2)}`],
+            ['SGST (9%):', `RS ${data.sgst.toFixed(2)}`],
+            ['Round Off:', `RS ${data.round_off.toFixed(2)}`],
+            [{ content: 'Total Amount:', styles: { fontStyle: 'bold', fontSize: 11 } }, { content: `RS ${data.grand_total.toFixed(2)}`, styles: { fontStyle: 'bold', fontSize: 11 } }]
+        ];
+
+        doc.autoTable({
+            startY: finalY + 5,
+            body: totalsBody,
+            theme: 'plain',
+            tableWidth: 'wrap',
+            margin: { left: 145 },
+            columnStyles: { 0: { halign: 'left' }, 1: { halign: 'right' } }
+        });
+        
+        let footerY = pageHeight - 85;
+        
+        if (doc.lastAutoTable.finalY > footerY - 10) {
+            doc.addPage();
+        }
+
+        doc.setFontSize(11).text("Declaration", 14, footerY);
+        doc.setFontSize(9).text("Certified that all the particulars show in the above tax invoice are true and correct and that my", 14, footerY + 6);
+        doc.text("registration under KVAT Act 2003 is Valid as on the date on this bill.", 14, footerY + 12);
+        doc.setFontSize(10).setFont(undefined, 'bold').text(companyName, 14, footerY + 20);
+        doc.setFont(undefined, 'normal');
+        doc.text("Account Number:30640296960 ", 14, footerY + 26);
+        doc.text("Branch: MG Road Ernakulam ", 14, footerY + 32);
+        doc.text("IFSC Code: SBIN0003539", 14, footerY + 38);
+        doc.line(14, footerY + 48, 195, footerY + 48);
+        doc.setFontSize(10).text(companyName, 105, footerY + 54, { align: "center" });
+        doc.setFontSize(8).text("This is a computer generated invoice", 105, footerY + 59, { align: "center" });
+        
+        doc.save(`${invoiceNumber}.pdf`);
+    }
+    
+    function toWords(num) {
+        if (isNaN(num)) return "Invalid Amount";
+
+        const rupees = Math.floor(num);
+        const paise = Math.round((num - rupees) * 100);
+
+        const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+        const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+        const tens = ["", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+        function convertLessThanThousand(n) {
+            if (n === 0) return "";
+            if (n < 10) return units[n];
+            if (n < 20) return teens[n - 10];
+            if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + units[n % 10] : "");
+            return units[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + convertLessThanThousand(n % 100) : "");
+        }
+
+        function convert(n) {
+            if (n === 0) return "Zero";
+            let result = "";
+            const crore = Math.floor(n / 10000000);
+            n %= 10000000;
+            const lakh = Math.floor(n / 100000);
+            n %= 100000;
+            const thousand = Math.floor(n / 1000);
+            n %= 1000;
+            const hundred = Math.floor(n / 100);
+            const remainder = n % 100;
+
+            if (crore > 0) result += convertLessThanThousand(crore) + " Crore ";
+            if (lakh > 0) result += convertLessThanThousand(lakh) + " Lakh ";
+            if (thousand > 0) result += convertLessThanThousand(thousand) + " Thousand ";
+            if (hundred > 0) result += convertLessThanThousand(hundred) + " Hundred ";
+            if (remainder > 0) result += convertLessThanThousand(remainder);
+
+            return result.trim();
+        }
+
+        let words = convert(rupees) + " Rupees";
+        if (paise > 0) words += " and " + convertLessThanThousand(paise) + " Paise";
+
+        return words + " Only";
+    }
+</script>
+</body>
+</html>
