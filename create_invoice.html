@@ -760,7 +760,7 @@
         finalY += 10;
       }
 
-      doc.setFontSize(11).setFont(undefined, 'bold').text("Amount in Words: " + toWords(data.grand_total), 196, finalY, { align: "right" });
+      doc.setFontSize(13).setFont(undefined, 'bold').text("Amount in Words: " + toWords(data.grand_total), 196, finalY, { align:"right" });
 
       const totalsBody = [
         ['Subtotal:', `RS ${data.subtotal.toFixed(2)}`],
@@ -800,20 +800,52 @@
       doc.save(`${invoiceNumber}.pdf`);
     }
     
-    function toWords(n) {
-        const num = parseFloat(n);
-        if (isNaN(num)) return "";
-        const a = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
-        const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
-        function convert(n) {
-            if (n < 20) return a[n];
-            if (n < 100) return b[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + a[n % 10] : "");
-            if (n < 1000) return a[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + convert(n % 100) : "");
-            if (n < 100000) return convert(Math.floor(n / 1000)) + " Thousand" + (n % 1000 !== 0 ? " " + convert(n % 1000) : "");
-            return n.toString();
-        }
-        return convert(Math.floor(num)) + " Rupees Only";
+    function toWords(num) {
+    if (isNaN(num)) return "Invalid Amount";
+
+    const rupees = Math.floor(num);
+    const paise = Math.round((num - rupees) * 100);
+
+    const units = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+    const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+    const tens = ["", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+    function convertLessThanThousand(n) {
+        if (n === 0) return "";
+        if (n < 10) return units[n];
+        if (n < 20) return teens[n - 10];
+        if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 !== 0 ? " " + units[n % 10] : "");
+        return units[Math.floor(n / 100)] + " Hundred" + (n % 100 !== 0 ? " and " + convertLessThanThousand(n % 100) : "");
     }
+
+    function convert(n) {
+        if (n === 0) return "Zero";
+        let result = "";
+        const crore = Math.floor(n / 10000000);
+        n %= 10000000;
+        const lakh = Math.floor(n / 100000);
+        n %= 100000;
+        const thousand = Math.floor(n / 1000);
+        n %= 1000;
+        const hundred = Math.floor(n / 100);
+        const remainder = n % 100;
+
+        if (crore > 0) result += convertLessThanThousand(crore) + " Crore ";
+        if (lakh > 0) result += convertLessThanThousand(lakh) + " Lakh ";
+        if (thousand > 0) result += convertLessThanThousand(thousand) + " Thousand ";
+        if (hundred > 0) result += convertLessThanThousand(hundred) + " Hundred ";
+        if (remainder > 0) result += convertLessThanThousand(remainder);
+
+        return result.trim();
+    }
+
+    let words = convert(rupees) + " Rupees";
+    if (paise > 0) words += " and " + convertLessThanThousand(paise) + " Paise";
+
+    return words + " Only";
+}
 </script>
+</body>
+</html>
 </body>
 </html>
