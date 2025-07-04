@@ -263,24 +263,38 @@
         
         // Check for invoice ID in URL for editing
         const urlParams = new URLSearchParams(window.location.search);
-        const invoiceId = urlParams.get('edit');
+        const invoiceId = urlParams.get('edit') || urlParams.get('id');
         if (invoiceId) {
-            isEditingInvoice = true;
-            await loadInvoiceForEditing(invoiceId);
-        }
+    isEditingInvoice = true;
+    document.getElementById('formTitle').textContent = 'Edit Invoice';
+    document.getElementById('saveButton').textContent = 'Update Invoice';
+    await loadInvoiceForEditing(invoiceId);
+}
+
     }
 
     async function loadInvoiceForEditing(invoiceId) {
-        try {
-            const { data: invoiceData, error: invoiceError } = await supabaseClient
-                .from('invoices')
-                .select('*')
-                .eq('id', invoiceId)
-                .single();
+    try {
+        const { data: invoiceData, error: invoiceError } = await supabaseClient
+            .from('invoices')
+            .select('*')
+            .eq('id', invoiceId)
+            .single();
 
-            if (invoiceError) throw invoiceError;
+        if (invoiceError) throw invoiceError;
 
-            console.log("Loaded invoice data:", invoiceData);
+        // Transform items to products if needed
+        if (invoiceData.items && !invoiceData.products) {
+            invoiceData.products = invoiceData.items.map(item => ({
+                productName: item.description,
+                quantity: item.quantity,
+                price: item.rate,
+                discountPercent: 0, // Default if not stored
+                description: item.description
+            }));
+        }
+
+        console.log("Transformed invoice data:", invoiceData);
 
             // Set basic invoice information
             document.getElementById('customerName').value = invoiceData.client_name || '';
@@ -290,6 +304,7 @@
             document.getElementById('remarks').value = invoiceData.remarks || '';
             document.getElementById('terms').value = invoiceData.terms || '';
             document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
+            
 
             // Set tax type
             document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
