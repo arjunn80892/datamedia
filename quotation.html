@@ -209,40 +209,57 @@
     }
 
     async function loadQuotationForEdit(id) {
-    // Assuming you have a showLoading function, otherwise you can remove these lines
-    // showLoading(true); 
     try {
         const { data: quotation, error } = await supabaseClient
             .from('quotations')
             .select('*')
             .eq('id', id)
-            .single(); // Use .single() to get just one record
+            .single();
 
-        if (error) throw error;
+        if (error) {
+            // This error is likely caused by Row Level Security. See the next section.
+            throw error;
+        }
 
         if (quotation) {
-            // --- POPULATE THE FORM FIELDS ---
-            document.getElementById('quotationId').value = quotation.id;
-            document.getElementById('customerName').value = quotation.customer_name || '';
-            clientSearchInput.value = quotation.customer_name || ''; // Also fill search input
-            document.getElementById('billingAddress').value = quotation.billing_address || '';
-            document.getElementById('quotationDate').value = quotation.quotation_date;
+            // --- POPULATE ALL FORM FIELDS ---
+            quotationIdInput.value = quotation.id;
+            clientNameInput.value = quotation.client_name || "";
+            
+            // Also populate the other name/search fields for consistency
+            document.getElementById("customerName").value = quotation.customer_name || quotation.client_name || "";
+            clientSearchInput.value = quotation.client_name || "";
+
+            // Populate the rest of the form
+            document.getElementById("companySelect").value = quotation.company_name || "Datamedia";
+            document.getElementById("branchName").value = quotation.branch_name || "";
+            document.getElementById("referenceNumber").value = quotation.reference_number || "";
+            billingAddressInput.value = quotation.billing_address || "";
+            document.getElementById("quotationDate").value = quotation.quotation_date || '';
+            document.getElementById("taxRule").value = quotation.tax_rule || "cgst_sgst";
             
             // This is crucial: Set the savedProducts array and re-render the table
             savedProducts = quotation.products || [];
-            renderTable(); // You should have a renderTable function
-            updateTotals(); // You already have this function
+            renderTable();
+            updateTotals();
+            
+            // Re-create the selectedClientForQuotation object
+            selectedClientForQuotation = { 
+                name: quotation.client_name, 
+                gstin: quotation.client_gstin,
+                address: quotation.billing_address
+            };
+
         } else {
-            alert('Quotation not found!');
+            alert('Quotation with this ID was not found!');
         }
 
     } catch (error) {
         console.error('Error loading quotation for edit:', error);
-        alert(`Failed to load quotation data: ${error.message}`);
-    } finally {
-        // showLoading(false);
+        alert(`Failed to load quotation data: ${error.message}\n\nPlease check your Row Level Security policies in Supabase.`);
     }
 }
+
     // --- DEBOUNCE UTILITY ---
     function debounce(func, delay) {
         let timeout;
@@ -548,25 +565,7 @@ async function saveOrUpdateQuotation(showAlert = true) {
 
     return lastSavedQuotationData;
 }
-    async function loadQuotationForEdit(id) {
-        const { data: q, error } = await supabaseClient.from('quotations').select('*').eq('id', id).single();
-        if (error) {
-            alert(`Failed to load quotation: ${error.message}`); newQuotation();
-        } else {
-            quotationIdInput.value = q.id; 
-            clientNameInput.value = q.client_name || "";
-            selectedClientForQuotation = { name: q.client_name, gstin: q.client_gstin };
-            document.getElementById("companySelect").value = q.company_name || "Datamedia";
-            document.getElementById("branchName").value = q.branch_name || "";
-            document.getElementById("customerName").value = q.customer_name || "";
-            document.getElementById("referenceNumber").value = q.reference_number || "";
-            billingAddressInput.value = q.billing_address || "";
-            document.getElementById("quotationDate").value = q.quotation_date || '';
-            document.getElementById("taxRule").value = q.tax_rule || "cgst_sgst";
-            savedProducts = q.products || [];
-            renderTable(); updateTotals();
-        }
-    }
+    
 
     function newQuotation() {
         showConfirmation("Are you sure you want to clear the form and start a new quotation?", () => {
@@ -705,8 +704,6 @@ async function saveOrUpdateQuotation(showAlert = true) {
         }
         doc.save(`Quotation_${clientName.replace(/ /g, '_')}_${quotationNumber}.pdf`);
     }
-
-    document.addEventListener('DOMContentLoaded', initializePage);
 </script>
 </body>
 </html>
