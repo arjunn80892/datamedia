@@ -266,8 +266,6 @@
         const invoiceId = urlParams.get('edit') || urlParams.get('id');
         if (invoiceId) {
     isEditingInvoice = true;
-    document.getElementById('formTitle').textContent = 'Edit Invoice';
-    document.getElementById('saveButton').textContent = 'Update Invoice';
     await loadInvoiceForEditing(invoiceId);
 }
 
