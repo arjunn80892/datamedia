@@ -610,12 +610,18 @@
             try {
                 console.log('Fetching invoices for user:', userId);
                 
+                // Option 1: If the column is actually 'user_uuid'
                 const { data, error, status } = await supabase
-                    .from('invoices')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .order('created_at', { ascending: false });
-                
+                .from('invoices')
+                .select('*')
+                .eq('user_uuid', userId)
+                .order('created_at', { ascending: false });
+
+                // Option 2: Debug by first checking the table structure
+                const { data: tableData } = await supabase
+                .rpc('get_table_columns', { table_name: 'invoices' });
+                console.log('Invoice table columns:', tableData);
+                                
                 if (error && status !== 406) throw error;
                 if (!data) throw new Error('No data returned');
                 
@@ -628,25 +634,48 @@
             }
         }
 
+                async function debugTableStructure() {
+            try {
+                const { data, error } = await supabase
+                .from('information_schema.columns')
+                .select('column_name')
+                .eq('table_name', 'invoices');
+                
+                if (error) throw error;
+                console.log('Invoice table columns:', data.map(col => col.column_name));
+            } catch (error) {
+                console.error('Debug error:', error);
+            }
+            }
+
+// Call it in your init function
+async function init() {
+  await debugTableStructure();
+  // Rest of your init code...
+}
+
         // Display invoices
         async function displayInvoices() {
             const user = await checkSession();
             if (!user) return;
 
-            const invoices = await fetchInvoices(user.id);
-            const container = document.getElementById('recent-invoices');
+            console.log('Current user ID:', user.id); // Debug user ID
             
+            const invoices = await fetchInvoices(user.id);
+            console.log('Raw invoices data:', invoices); // Debug raw data
+  
+            // Add more detailed empty state
             if (!invoices || invoices.length === 0) {
                 container.innerHTML = `
-                    <li class="activity-item">
-                        <div class="activity-icon">
-                            <i class="bi bi-exclamation-circle"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">No invoices found</div>
-                            <div class="activity-time">Create your first invoice</div>
-                        </div>
-                    </li>`;
+                <li class="activity-item">
+                    <div class="activity-icon text-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="activity-content">
+                    <div class="activity-title">No invoices found for user ${user.id}</div>
+                    <div class="activity-time">Try creating your first invoice</div>
+                    </div>
+                </li>`;
                 return;
             }
 
