@@ -584,12 +584,42 @@
         </div>
     </div>
 
-        <script>
+      <script>
     document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Supabase
         const supabaseUrl = 'https://riisjtqzsjebzjanwvgt.supabase.co';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Helper functions - moved to top
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return 'No date';
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
+
+        function showError(message) {
+            const container = document.getElementById('recent-invoices');
+            if (!container) return;
+            
+            container.innerHTML = `
+                <li class="activity-item">
+                    <div class="activity-icon text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-title">Error</div>
+                        <div class="activity-time">${message}</div>
+                    </div>
+                </li>`;
+        }
 
         // Check user session
         async function checkSession() {
@@ -607,6 +637,49 @@
                 console.error('Session error:', error.message);
                 window.location.href = 'index.html';
                 return null;
+            }
+        }
+
+        // Fetch invoices function - ADDED THIS MISSING FUNCTION
+        async function fetchInvoices(userId) {
+            try {
+                console.log('Fetching invoices for user:', userId);
+                
+                // Try common user reference columns
+                const possibleColumns = ['user_id', 'user_uuid', 'created_by', 'owner_id'];
+                let invoices = [];
+                
+                for (const column of possibleColumns) {
+                    const { data, error } = await supabase
+                        .from('invoices')
+                        .select('*')
+                        .eq(column, userId)
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (!error && data && data.length > 0) {
+                        invoices = data;
+                        break;
+                    }
+                }
+                
+                if (invoices.length === 0) {
+                    // Fallback to general query if no user-specific invoices found
+                    const { data, error } = await supabase
+                        .from('invoices')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (error) throw error;
+                    invoices = data;
+                }
+                
+                return invoices || [];
+            } catch (error) {
+                console.error('Error fetching invoices:', error.message);
+                showError('Failed to load invoices. Please try again.');
+                return [];
             }
         }
 
@@ -684,36 +757,6 @@
             });
         }
 
-        // Helper functions
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD'
-            }).format(amount);
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return 'No date';
-            const options = { year: 'numeric', month: 'short', day: 'numeric' };
-            return new Date(dateString).toLocaleDateString('en-US', options);
-        }
-
-        function showError(message) {
-            const container = document.getElementById('recent-invoices');
-            if (!container) return;
-            
-            container.innerHTML = `
-                <li class="activity-item">
-                    <div class="activity-icon text-danger">
-                        <i class="bi bi-exclamation-triangle"></i>
-                    </div>
-                    <div class="activity-content">
-                        <div class="activity-title">Error</div>
-                        <div class="activity-time">${message}</div>
-                    </div>
-                </li>`;
-        }
-
         // Initialize everything
         async function init() {
             try {
@@ -750,6 +793,4 @@
 
         init();
     });
-    </script>
-</body>
-</html>
+</script>
