@@ -584,7 +584,7 @@
         </div>
     </div>
 
-    <script>
+        <script>
     document.addEventListener('DOMContentLoaded', async () => {
         // Initialize Supabase
         const supabaseUrl = 'https://riisjtqzsjebzjanwvgt.supabase.co';
@@ -597,6 +597,11 @@
                 const { data: { user }, error } = await supabase.auth.getUser();
                 if (error) throw error;
                 if (!user) window.location.href = 'index.html';
+                
+                // Update user info in sidebar
+                document.querySelector('.user-name').textContent = user.email.split('@')[0];
+                document.querySelector('.user-email').textContent = user.email;
+                
                 return user;
             } catch (error) {
                 console.error('Session error:', error.message);
@@ -610,23 +615,48 @@
             try {
                 console.log('Fetching invoices for user:', userId);
                 
-                // Option 1: If the column is actually 'user_uuid'
-                const { data, error, status } = await supabase
-                .from('invoices')
-                .select('*')
-                .eq('user_uuid', userId)
-                .order('created_at', { ascending: false });
-
-                // Option 2: Debug by first checking the table structure
-                const { data: tableData } = await supabase
-                .rpc('get_table_columns', { table_name: 'invoices' });
-                console.log('Invoice table columns:', tableData);
-                                
-                if (error && status !== 406) throw error;
-                if (!data) throw new Error('No data returned');
+                // First try to get table structure
+                const { data: columns, error: columnsError } = await supabase
+                    .from('information_schema.columns')
+                    .select('column_name')
+                    .eq('table_name', 'invoices');
                 
-                console.log('Fetched invoices:', data);
-                return data;
+                if (columnsError) throw columnsError;
+                console.log('Available columns:', columns.map(c => c.column_name));
+                
+                // Try common user reference columns
+                const possibleColumns = ['user_uuid', 'user_id', 'created_by', 'owner_id'];
+                let invoices = [];
+                
+                for (const column of possibleColumns) {
+                    const { data, error } = await supabase
+                        .from('invoices')
+                        .select('*')
+                        .eq(column, userId)
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (!error && data && data.length > 0) {
+                        console.log(`Found invoices using column: ${column}`);
+                        invoices = data;
+                        break;
+                    }
+                }
+                
+                if (invoices.length === 0) {
+                    console.log('No invoices found with user reference columns, trying unrestricted query');
+                    const { data, error } = await supabase
+                        .from('invoices')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(5);
+                    
+                    if (error) throw error;
+                    invoices = data;
+                }
+                
+                console.log('Fetched invoices:', invoices);
+                return invoices || [];
             } catch (error) {
                 console.error('Error fetching invoices:', error.message);
                 showError('Failed to load invoices. Please try again.');
@@ -634,56 +664,38 @@
             }
         }
 
-                async function debugTableStructure() {
-            try {
-                const { data, error } = await supabase
-                .from('information_schema.columns')
-                .select('column_name')
-                .eq('table_name', 'invoices');
-                
-                if (error) throw error;
-                console.log('Invoice table columns:', data.map(col => col.column_name));
-            } catch (error) {
-                console.error('Debug error:', error);
-            }
-            }
-
-// Call it in your init function
-async function init() {
-  await debugTableStructure();
-  // Rest of your init code...
-}
-
         // Display invoices
         async function displayInvoices() {
             const user = await checkSession();
             if (!user) return;
 
-            console.log('Current user ID:', user.id); // Debug user ID
-            
+            const container = document.getElementById('recent-invoices');
+            if (!container) {
+                console.error('Invoices container not found');
+                return;
+            }
+
             const invoices = await fetchInvoices(user.id);
-            console.log('Raw invoices data:', invoices); // Debug raw data
-  
-            // Add more detailed empty state
+            
             if (!invoices || invoices.length === 0) {
                 container.innerHTML = `
-                <li class="activity-item">
-                    <div class="activity-icon text-warning">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    </div>
-                    <div class="activity-content">
-                    <div class="activity-title">No invoices found for user ${user.id}</div>
-                    <div class="activity-time">Try creating your first invoice</div>
-                    </div>
-                </li>`;
+                    <li class="activity-item">
+                        <div class="activity-icon text-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </div>
+                        <div class="activity-content">
+                            <div class="activity-title">No invoices found</div>
+                            <div class="activity-time">Create your first invoice to get started</div>
+                        </div>
+                    </li>`;
                 return;
             }
 
             container.innerHTML = '';
-            invoices.slice(0, 5).forEach(invoice => {
-                const dueDate = new Date(invoice.due_date);
+            invoices.forEach(invoice => {
+                const dueDate = invoice.due_date ? new Date(invoice.due_date) : null;
                 const today = new Date();
-                const isOverdue = dueDate < today && invoice.status !== 'paid';
+                const isOverdue = dueDate && dueDate < today && invoice.status !== 'paid';
                 const status = isOverdue ? 'overdue' : (invoice.status || 'draft');
                 
                 const statusClass = {
@@ -699,12 +711,15 @@ async function init() {
                 
                 let timeText;
                 if (status === 'paid') {
-                    timeText = `Paid on ${formatDate(invoice.paid_date || invoice.updated_at)} • ${amount}`;
+                    const paidDate = invoice.paid_date || invoice.updated_at;
+                    timeText = `Paid on ${paidDate ? formatDate(paidDate) : 'unknown date'} • ${amount}`;
                 } else if (isOverdue) {
                     const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
                     timeText = `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} • ${amount}`;
+                } else if (dueDate) {
+                    timeText = `Due ${formatDate(dueDate)} • ${amount}`;
                 } else {
-                    timeText = `Due ${formatDate(invoice.due_date)} • ${amount}`;
+                    timeText = `No due date • ${amount}`;
                 }
 
                 const item = document.createElement('li');
@@ -739,6 +754,8 @@ async function init() {
 
         function showError(message) {
             const container = document.getElementById('recent-invoices');
+            if (!container) return;
+            
             container.innerHTML = `
                 <li class="activity-item">
                     <div class="activity-icon text-danger">
@@ -754,6 +771,15 @@ async function init() {
         // Initialize everything
         async function init() {
             try {
+                // Test Supabase connection first
+                const { data: testData, error: testError } = await supabase
+                    .from('invoices')
+                    .select('*')
+                    .limit(1);
+                
+                if (testError) throw testError;
+                
+                // Load initial data
                 await displayInvoices();
                 
                 // Set up auto-refresh every 30 seconds
@@ -772,10 +798,12 @@ async function init() {
                 }
             } catch (error) {
                 console.error('Initialization error:', error);
-                showError('Failed to initialize dashboard');
+                showError('Failed to initialize dashboard. Please refresh the page.');
             }
         }
 
         init();
     });
-</script>
+    </script>
+</body>
+</html>
