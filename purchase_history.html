@@ -181,13 +181,13 @@
         const row = document.createElement('tr');
         row.innerHTML = `
           <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
-          <td>${purchase.purchase_number || `PUR-${purchase.id}`}</td>
+          <td>${purchase.purchase_number ?? `PUR-${purchase.id ?? 'N/A'}`}</td>
           <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
           <td>${purchase.supplier_name || 'N/A'}</td>
           <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
           <td>₹${(purchase.grand_total || 0).toFixed(2)}</td>
           <td>
-            <button class="btn btn-primary btn-sm" onclick="viewPurchase(${purchase.id})">View/Edit</button>
+            <button class="btn btn-primary btn-sm" onclick="viewPurchase('${purchase.purchase_number}')">View/Edit</button>
             <button class="btn btn-danger btn-sm" onclick="deletePurchase(${purchase.id})">Delete</button>
           </td>
         `;
@@ -246,9 +246,10 @@
       XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
     
-    function viewPurchase(id) {
-      window.location.href = `create_purchase.html?edit=${id}`;
-    }
+    function viewPurchase(purchaseNumber) {
+  window.location.href = `purchase_invoice.html?ref=${purchaseNumber}`;
+}
+
 
     // --- PDF GENERATION & ZIP DOWNLOAD ---
     async function generatePurchasePDF(purchase) {
@@ -325,21 +326,25 @@
 
     // --- FILTERING LOGIC ---
     function applyFilters() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const from = document.getElementById('fromDate').value;
-      const to = document.getElementById('toDate').value;
-      const tax = document.getElementById('taxFilter').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const from = document.getElementById('fromDate').value;
+    const to = document.getElementById('toDate').value;
+    const tax = document.getElementById('taxFilter').value;
 
-      const filtered = allPurchases.filter(purchase => {
-        const date = purchase.invoice_date;
-        const dateValid = (!from || date >= from) && (!to || date <= to);
-        (purchase.supplier_name || '').toLowerCase().includes(search) || 
+    const filtered = allPurchases.filter(purchase => {
+      const date = purchase.invoice_date?.split("T")[0]; // handle date string
+      const dateValid = (!from || date >= from) && (!to || date <= to);
+      const textMatch =
+        (purchase.supplier_name || '').toLowerCase().includes(search) ||
         (purchase.purchase_number || '').toLowerCase().includes(search);
-         const taxMatch = !tax || purchase.tax_type === tax;
-        return dateValid && textMatch && taxMatch;
-      });
-      renderTable(filtered);
-    }
+      const taxMatch = !tax || purchase.tax_type === tax;
+
+      return dateValid && textMatch && taxMatch;
+    });
+
+    renderTable(filtered);
+  }
+
     
     function resetFilters() {
         document.getElementById('searchInput').value = '';
