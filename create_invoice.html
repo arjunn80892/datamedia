@@ -760,7 +760,7 @@
         finalY += 10;
       }
 
-      doc.setFontSize(10).setFont(undefined, 'bold').text("Amount in Words: " + toWords(data.grand_total), 196, finalY, { align: "right" });
+      doc.setFontSize(13).setFont(undefined, 'bold').text("Amount in Words: " + toWords(data.grand_total), 196, finalY, { align: "right" });
 
       const totalsBody = [
         ['Subtotal:', `RS ${data.subtotal.toFixed(2)}`],
