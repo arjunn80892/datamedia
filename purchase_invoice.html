@@ -540,33 +540,61 @@
 
     // --- DATA SAVING & PDF GENERATION ---
     async function saveInvoiceData() {
-    // ... (your code to gather form data into `invoiceData` object) ...
+    if (savedProducts.length === 0) {
+        alert("Please add at least one product before saving.");
+        return;
+    }
+
+    // Build the data object from the form fields
     const invoiceData = {
         company_name: "Datamedia",
         vendor_name: document.getElementById("vendorName").value,
         vendor_address: document.getElementById("vendorAddress").value,
-        // ... include all other fields ...
+        invoice_date: document.getElementById("invoiceDate").value,
+        due_date: document.getElementById("dueDate").value,
+        tax_type: document.getElementById("taxType").value,
+        products: savedProducts,
+        grand_total: parseFloat(document.getElementById('total')?.textContent || 0),
+        subtotal: parseFloat(document.getElementById('subtotal')?.textContent || 0),
+        cgst: parseFloat(document.getElementById('cgst')?.textContent || 0),
+        sgst: parseFloat(document.getElementById('sgst')?.textContent || 0),
+        igst: parseFloat(document.getElementById('igst')?.textContent || 0),
+        round_off: parseFloat(document.getElementById('roundOff')?.value || 0),
+        remarks: document.getElementById("remarks").value,
+        terms: document.getElementById("terms").value,
+        reference_number: document.getElementById("referenceNumber").value,
+        status: 'Draft',
     };
-
 
     try {
         let result, error;
-        
-        // CORRECTED: Using your actual column name
-        const existingId = lastSavedInvoiceData ? lastSavedInvoiceData.invoice_number_id : null;
 
-        if (existingId) {
-            // UPDATE logic
+        if (isEditingInvoice) {
+            // UPDATE logic for an existing invoice
+            const existingId = lastSavedInvoiceData.invoice_number_id;
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
-                // CORRECTED: Using your actual column name
-                .eq('invoice_number_id', existingId) 
+                .eq('invoice_number_id', existingId) // FIXED: Uses your correct ID column
                 .select()
                 .single());
         } else {
-            // INSERT logic
-            // ... (your existing insert logic to generate invoice_number) ...
+            // INSERT logic for a new invoice
+            // FIXED: Correctly generates the invoice number you want
+            const now = new Date();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const { count, error: countError } = await supabaseClient
+                .from('purchase_invoices')
+                .select('*', { count: 'exact', head: true })
+                .gte('invoice_date', `${year}-${month}-01T00:00:00.000Z`)
+                .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01T00:00:00.000Z`);
+            
+            if (countError) throw countError;
+
+            const monthlyNumber = (count + 1).toString().padStart(4, '0');
+            invoiceData.invoice_number = `PUR-${monthlyNumber}-${month}-${year}`;
+
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .insert(invoiceData)
@@ -576,11 +604,12 @@
 
         if (error) throw error;
 
-        // Success!
+        // --- Success ---
         lastSavedInvoiceData = result; 
-        alert(`Purchase Invoice saved successfully!`);
-
-        // CORRECTED: Using your actual column name
+        isEditingInvoice = true; // Set to true after saving
+        alert(`Purchase Invoice #${result.invoice_number} ${lastSavedInvoiceData ? 'Updated' : 'Saved'} Successfully!`);
+        
+        // FIXED: Correctly update the URL with the ID
         window.history.replaceState(null, null, `?id=${result.invoice_number_id}`);
 
     } catch (err) {
