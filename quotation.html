@@ -1004,20 +1004,24 @@
     }
     
     function handleTableClick(event) {
-        const target = event.target.closest('button');
-        if (!target) return;
-        
-        const index = parseInt(target.dataset.index, 10);
-        if (target.classList.contains('remove-btn')) {
-            showConfirmation("Are you sure you want to remove this product?", () => {
-                savedProducts.splice(index, 1); 
-                renderTable(); 
-                updateTotals();
-            });
-        } else if (target.classList.contains('edit-btn')) {
-            editProduct(index);
-        }
+    const target = event.target.closest('button');
+    if (!target) return;
+    
+    // Stop event propagation to prevent any parent handlers
+    event.stopPropagation();
+    event.preventDefault();
+    
+    const index = parseInt(target.dataset.index, 10);
+    if (target.classList.contains('remove-btn')) {
+        showConfirmation("Are you sure you want to remove this product?", () => {
+            savedProducts.splice(index, 1); 
+            renderTable(); 
+            updateTotals();
+        });
+    } else if (target.classList.contains('edit-btn')) {
+        editProduct(index);
     }
+}
 
     function editProduct(index) {
         currentlyEditingIndex = index;
@@ -1204,22 +1208,41 @@
         });
         
         document.querySelectorAll('.pdf-quotation').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.dataset.id;
-                const quotation = allQuotations.find(q => q.id == id);
+    btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        try {
+            // Show loading state
+            btn.innerHTML = '<div class="loading-spinner"></div>';
+            
+            // Get the full quotation data
+            const { data: quotation, error } = await supabaseClient
+                .from('quotations')
+                .select('*')
+                .eq('id', id)
+                .single();
                 
-                if (!quotation) {
-                    showAlert('Error loading quotation for PDF generation', 'error');
-                    return;
-                }
-                
-                // Set the data and generate PDF
-                quotationIdInput.value = quotation.id;
-                savedProducts = quotation.products || [];
-                lastSavedQuotationData = quotation;
-                await generateQuotationPDF();
-            });
-        });
+            if (error || !quotation) {
+                showAlert('Error loading quotation for PDF generation', 'error');
+                return;
+            }
+            
+            // Set the data for PDF generation
+            quotationIdInput.value = quotation.id;
+            savedProducts = quotation.products || [];
+            lastSavedQuotationData = quotation;
+            
+            // Generate the PDF
+            await generateQuotationPDF();
+            
+        } catch (error) {
+            console.error('Error generating PDF from history:', error);
+            showAlert('Failed to generate PDF', 'error');
+        } finally {
+            btn.innerHTML = '<i class="fas fa-file-pdf"></i> PDF';
+        }
+    });
+});
         
         document.querySelectorAll('.delete-quotation').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -1690,20 +1713,38 @@
     }
 
     async function generateQuotationPDF() {
-        try {
-            generatePdfBtn.innerHTML = '<div class="loading-spinner" style="border-top-color: white;"></div> Generating...';
-            generatePdfBtn.disabled = true;
+    try {
+        generatePdfBtn.innerHTML = '<div class="loading-spinner" style="border-top-color: white;"></div> Generating...';
+        generatePdfBtn.disabled = true;
+        
+        // First save the current quotation if needed
+        const savedData = await saveOrUpdateQuotation(false); 
+        if (!savedData) { 
+            showAlert("Could not save quotation data. Please check for errors.", 'error');
+            return; 
+        }
+        
+        if (savedProducts.length === 0) { 
+            showAlert("Please add at least one product.", 'error');
+            return; 
+        }
+        
+        // Make sure we have the latest data
+        const { data: latestQuotation, error } = await supabaseClient
+            .from('quotations')
+            .select('*')
+            .eq('id', savedData.id)
+            .single();
             
-            const savedData = await saveOrUpdateQuotation(false); 
-            if (!savedData) { 
-                showAlert("Could not save quotation data. Please check for errors.", 'error');
-                return; 
-            }
-            
-            if (savedProducts.length === 0) { 
-                showAlert("Please add at least one product.", 'error');
-                return; 
-            }
+        if (error || !latestQuotation) {
+            showAlert("Failed to load quotation data for PDF generation", 'error');
+            return;
+        }
+        
+        // Update our local data with the latest from DB
+        savedProducts = latestQuotation.products || [];
+        lastSavedQuotationData = latestQuotation;
+        
             
             const { jsPDF } = window.jspdf; 
             const doc = new jsPDF();
