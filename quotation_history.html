@@ -199,31 +199,34 @@
     }
 
     function renderTable(quotationsToRender) {
-      if (!quotationsToRender || !quotationsToRender.length) {
+    if (!quotationsToRender || !quotationsToRender.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">No quotations found matching your criteria</td></tr>';
         return;
-      }
-      
-      tbody.innerHTML = quotationsToRender.map(q => `
-        <tr>
-          <td><input type="checkbox" class="select-quote" value="${q.id}"></td>
-          <td>QUO-${q.id}</td>
-          <td>${q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A'}</td>
-          <td>${q.client_name || 'N/A'}</td>
-          <td>${q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST'}</td>
-          <td><span class="status-badge status-${q.status || 'draft'}">${(q.status || 'draft').toUpperCase()}</span></td>
-          <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          <td>
-            <a href="quotation.html?id=${q.id}" class="btn btn-primary" style="padding: 5px 10px;" title="Edit Quotation">
-                <i class="fas fa-edit"></i>
-            </a>
-            <button class="btn btn-danger" onclick="deleteQuotation(${q.id})" style="padding: 5px 10px;" title="Delete Quotation">
-                <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `).join('');
     }
+
+    // --- ADD THIS LINE HERE for debugging ---
+    console.log("Data for the first item:", quotationsToRender[0]);
+    
+    tbody.innerHTML = quotationsToRender.map(q => `
+        <tr>
+            <td><input type="checkbox" class="select-quote" value="${q.id}"></td>
+            <td>QUO-${q.id}</td>
+            <td>${q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+            <td>${q.client_name || 'N/A'}</td>
+            <td>${q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST'}</td>
+            <td><span class="status-badge status-${q.status || 'draft'}">${(q.status || 'draft').toUpperCase()}</span></td>
+            <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            <td>
+                <a href="quotation.html?id=${q.id}" class="btn btn-primary" style="padding: 5px 10px;" title="Edit Quotation">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <button class="btn btn-danger" onclick="deleteQuotation(${q.id})" style="padding: 5px 10px;" title="Delete Quotation">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
 
     // --- ACTIONS (DELETE, EXPORT, ETC.) ---
     async function deleteQuotation(id) {
