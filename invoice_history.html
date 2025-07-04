@@ -128,18 +128,19 @@
 
 <script>
     // --- SUPABASE CONFIGURATION ---
-    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co'; // Replace with your Supabase URL
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'; // Replace with your Supabase Anon Key
+    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // --- GLOBAL STATE ---
     let allInvoices = [];
+    const { jsPDF } = window.jspdf;
 
     // --- AUTHENTICATION & INITIALIZATION ---
     document.addEventListener('DOMContentLoaded', async () => {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
       } else {
         document.body.style.visibility = 'visible';
         await fetchInvoices();
@@ -152,7 +153,6 @@
       const tbody = document.querySelector('#invoiceTable tbody');
       tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
 
-      // FIX: Corrected the order by column from 'date' to 'invoice_date'
       const { data, error } = await supabaseClient
         .from('invoices')
         .select('*')
@@ -176,7 +176,6 @@
         return;
       }
       
-      // FIX: Corrected all field names to match the database schema and added fallbacks for numbers
       invoicesToRender.forEach(invoice => {
         const totalTax = (invoice.cgst || 0) + (invoice.sgst || 0) + (invoice.igst || 0);
         const row = document.createElement('tr');
@@ -196,7 +195,7 @@
       });
     }
 
-    // --- ACTIONS (DELETE, EXPORT, ETC.) ---
+    // --- INVOICE ACTIONS ---
     async function deleteInvoice(id) {
         if (!confirm(`Are you sure you want to delete Invoice INV-${id}? This cannot be undone.`)) return;
         const { error } = await supabaseClient.from('invoices').delete().eq('id', id);
@@ -204,7 +203,7 @@
             showNotification(`Error: ${error.message}`, 'danger');
         } else {
             showNotification(`Invoice INV-${id} deleted successfully.`, 'success');
-            fetchInvoices(); // Refresh the list
+            fetchInvoices();
         }
     }
     
@@ -248,7 +247,80 @@
     }
     
     function viewInvoice(id) {
-      window.location.href = `create_invoice.html?id=${id}`; // Assuming your invoice creation page is invoice.html
+      window.location.href = `create_invoice.html?id=${id}`;
+    }
+
+    // --- PDF GENERATION & ZIP DOWNLOAD ---
+    async function generateInvoicePDF(invoice) {
+      const doc = new jsPDF();
+      
+      // Add logo or header
+      doc.setFontSize(20);
+      doc.text('INVOICE', 105, 20, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text(`INV-${invoice.id}`, 105, 30, { align: 'center' });
+      
+      // Client and date info
+      doc.text(`Date: ${new Date(invoice.invoice_date).toLocaleDateString()}`, 15, 40);
+      doc.text(`Client: ${invoice.client_name}`, 15, 50);
+      
+      // Add line items table
+      doc.autoTable({
+        startY: 60,
+        head: [['Description', 'Quantity', 'Rate', 'Amount']],
+        body: invoice.items.map(item => [
+          item.description,
+          item.quantity,
+          `₹${item.rate.toFixed(2)}`,
+          `₹${(item.quantity * item.rate).toFixed(2)}`
+        ]),
+        margin: { top: 10 }
+      });
+      
+      // Add totals
+      const finalY = doc.lastAutoTable.finalY + 10;
+      doc.text(`Subtotal: ₹${invoice.subtotal.toFixed(2)}`, 150, finalY);
+      if (invoice.tax_type === 'cgst_sgst') {
+        doc.text(`CGST (${invoice.cgst_rate}%): ₹${invoice.cgst.toFixed(2)}`, 150, finalY + 10);
+        doc.text(`SGST (${invoice.sgst_rate}%): ₹${invoice.sgst.toFixed(2)}`, 150, finalY + 20);
+      } else {
+        doc.text(`IGST (${invoice.igst_rate}%): ₹${invoice.igst.toFixed(2)}`, 150, finalY + 10);
+      }
+      doc.text(`Grand Total: ₹${invoice.grand_total.toFixed(2)}`, 150, finalY + 30);
+      
+      return doc.output('blob');
+    }
+
+    async function downloadSelectedInvoices() {
+      const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+      if (selectedIds.length === 0) {
+        showNotification("No invoices selected.", 'danger');
+        return;
+      }
+
+      showNotification(`Preparing ${selectedIds.length} invoice(s) for download...`, 'info');
+      
+      try {
+        const zip = new JSZip();
+        const { data: invoices, error } = await supabaseClient
+          .from('invoices')
+          .select('*')
+          .in('id', selectedIds);
+        
+        if (error) throw error;
+        
+        for (const invoice of invoices) {
+          const pdfBlob = await generateInvoicePDF(invoice);
+          zip.file(`INV-${invoice.id}.pdf`, pdfBlob);
+        }
+        
+        const content = await zip.generateAsync({ type: 'blob' });
+        saveAs(content, `invoices_${new Date().toISOString().slice(0,10)}.zip`);
+        showNotification(`${selectedIds.length} invoice(s) downloaded successfully.`, 'success');
+      } catch (error) {
+        console.error("Error generating ZIP:", error);
+        showNotification(`Error: ${error.message}`, 'danger');
+      }
     }
 
     // --- FILTERING LOGIC ---
@@ -294,18 +366,17 @@
       document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
       document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
       document.getElementById('exportBtn').addEventListener('click', exportInvoicesToExcel);
+      document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedInvoices);
       document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
       document.getElementById('toggleAllCheckbox').addEventListener('click', (e) => {
           document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = e.target.checked);
       });
-      // Note: downloadSelectedInvoicesPDF is not implemented as it requires re-generating PDFs.
-      // The button is left for future implementation if needed.
-      document.getElementById('downloadSelectedBtn').style.display = 'none';
     }
     
     // Make functions accessible from HTML onclick attributes
     window.viewInvoice = viewInvoice;
     window.deleteInvoice = deleteInvoice;
+    window.downloadSelectedInvoices = downloadSelectedInvoices;
 
 </script>
 </body>
