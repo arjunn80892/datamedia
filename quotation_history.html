@@ -134,9 +134,6 @@
       <button class="btn btn-danger" id="deleteSelectedBtn">
         <i class="fas fa-trash"></i> Delete Selected
       </button>
-      <button class="btn btn-warning" id="printSelectedBtn">
-        <i class="fas fa-print"></i> Print Selected
-      </button>
       <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">
         <i class="fas fa-arrow-left"></i> Back to Dashboard
       </button>
@@ -219,9 +216,6 @@
           <td>
             <a href="quotation.html?id=${q.id}" class="btn btn-primary" style="padding: 5px 10px;" title="Edit Quotation">
                 <i class="fas fa-edit"></i>
-            </a>
-            <a href="quotation.html?id=${q.id}&print=true" target="_blank" class="btn btn-warning" style="padding: 5px 10px;" title="Print Quotation">
-                <i class="fas fa-print"></i>
             </a>
             <button class="btn btn-danger" onclick="deleteQuotation(${q.id})" style="padding: 5px 10px;" title="Delete Quotation">
                 <i class="fas fa-trash"></i>
