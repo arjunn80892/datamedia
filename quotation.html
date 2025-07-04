@@ -345,6 +345,29 @@ function showAlert(message, type = 'info') {
     }, 3000);
 }
 
+function showAlert(message, type = 'info') {
+    const alertContainer = document.body; // Or another container element
+    const alertDiv = document.createElement('div');
+    
+    // Simple styling for the alert
+    alertDiv.style.position = 'fixed';
+    alertDiv.style.top = '20px';
+    alertDiv.style.right = '20px';
+    alertDiv.style.padding = '15px';
+    alertDiv.style.borderRadius = '8px';
+    alertDiv.style.color = 'white';
+    alertDiv.style.zIndex = '2000';
+    alertDiv.style.backgroundColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8';
+    
+    alertDiv.textContent = message;
+    
+    alertContainer.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
 function showConfirmation(text, callback) {
     modalText.textContent = text;
     confirmCallback = callback;
@@ -532,10 +555,11 @@ function renderTable() {
     
     savedProducts.forEach((product, index) => {
         const tr = document.createElement("tr");
+        // --- UPDATED HTML FOR BUTTONS ---
         tr.innerHTML = `
             <td>
                 ${product.productName}
-                ${product.description ? `<div class="product-description">${product.description}</div>` : ''}
+                ${product.description ? `<div class="product-description" style="font-size:12px; color:var(--gray);">${product.description}</div>` : ''}
             </td>
             <td>${product.brand || '-'}</td>
             <td>${product.unit}</td>
@@ -544,14 +568,25 @@ function renderTable() {
             <td>${product.discountPercent.toFixed(2)}</td>
             <td>${product.total.toFixed(2)}</td>
             <td>
-                <button class="action-btn edit-btn" data-index="${index}">
-                    <i class="fas fa-edit"></i> Edit
-                </button>
-                <button class="action-btn remove-btn" data-index="${index}">
-                    <i class="fas fa-trash"></i> Remove
-                </button>
+                <div style="display: flex; gap: 5px;">
+                    <button type="button" class="btn btn-sm btn-light" onclick="editProduct(${index})">
+                        Edit
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="removeProduct(${index})">
+                        Remove
+                    </button>
+                </div>
             </td>`;
         savedProductsBody.appendChild(tr);
+    });
+}
+
+// You also need this function to be called by the remove button
+function removeProduct(index) {
+    showConfirmation("Are you sure you want to remove this product?", () => {
+        savedProducts.splice(index, 1);
+        renderTable();
+        updateTotals();
     });
 }
 
@@ -634,31 +669,33 @@ function updateTotals() {
 function getQuotationDataFromForm() {
     const clientName = clientNameInput.value.trim();
     if (!clientName || !document.getElementById("quotationDate").value || savedProducts.length === 0) {
-        showAlert("Please select a Client, set a Quotation Date, and add at least one product.", "error"); 
+        alert("Please select a Client, set a Quotation Date, and add at least one product.");
         return null;
     }
-    
+
     return {
-        id: quotationIdInput.value || crypto.randomUUID(),
+        // CORRECTED: This no longer sends a random UUID for new records.
+        id: quotationIdInput.value || undefined,
+        
+        // All other properties remain the same
         company_name: document.getElementById("companySelect").value,
-        client_name: clientName, 
+        client_name: clientName,
         client_gstin: selectedClientForQuotation ? selectedClientForQuotation.gstin : null,
         branch_name: document.getElementById("branchName").value.trim(),
-        customer_name: document.getElementById("customerName").value.trim(), 
+        customer_name: document.getElementById("customerName").value.trim(),
         reference_number: document.getElementById("referenceNumber").value.trim(),
-        billing_address: billingAddressInput.value.trim(), 
+        billing_address: billingAddressInput.value.trim(),
         quotation_date: document.getElementById("quotationDate").value,
-        tax_rule: document.getElementById("taxRule").value, 
+        tax_rule: document.getElementById("taxRule").value,
         products: savedProducts,
-        subtotal: parseFloat(document.getElementById("subtotal").textContent), 
+        subtotal: parseFloat(document.getElementById("subtotal").textContent),
         cgst: parseFloat(document.getElementById("cgst").textContent),
-        sgst: parseFloat(document.getElementById("sgst").textContent), 
+        sgst: parseFloat(document.getElementById("sgst").textContent),
         igst: parseFloat(document.getElementById("igst").textContent),
-        total_tax: parseFloat(document.getElementById("totalTax").textContent), 
+        total_tax: parseFloat(document.getElementById("totalTax").textContent),
         grand_total: parseFloat(document.getElementById("grandTotal").textContent)
     };
 }
-
 async function saveOrUpdateQuotation(showAlert = true) {
     if (isSaving) return null;
     isSaving = true;
