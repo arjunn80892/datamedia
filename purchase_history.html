@@ -150,24 +150,26 @@
 
     // --- DATA FETCHING & RENDERING ---
     async function fetchPurchases() {
-      const tbody = document.querySelector('#purchaseTable tbody');
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
+    const tbody = document.querySelector('#purchaseTable tbody');
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
 
-      const { data, error } = await supabaseClient
+    const { data, error } = await supabaseClient
         .from('purchase_invoices')
         .select('*')
         .order('invoice_date', { ascending: false });
 
-      if (error) {
+    // --- ADD THIS LINE HERE ---
+    console.log("Database response:", { data, error });
+
+    if (error) {
         console.error("Error loading purchase invoices:", error);
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
         return;
-      }
-
-      allPurchases = data;
-      renderTable(allPurchases);
     }
 
+    allPurchases = data;
+    renderTable(allPurchases);
+}
     function renderTable(purchasesToRender) {
     const tbody = document.querySelector('#purchaseTable tbody');
     tbody.innerHTML = '';
