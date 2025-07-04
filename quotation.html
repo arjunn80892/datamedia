@@ -346,10 +346,10 @@ function showAlert(message, type = 'info') {
 }
 
 function showAlert(message, type = 'info') {
-    const alertContainer = document.body; // Or another container element
+    const alertContainer = document.body;
     const alertDiv = document.createElement('div');
-    
-    // Simple styling for the alert
+
+    // Basic styling for the alert
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
@@ -357,6 +357,7 @@ function showAlert(message, type = 'info') {
     alertDiv.style.borderRadius = '8px';
     alertDiv.style.color = 'white';
     alertDiv.style.zIndex = '2000';
+    alertDiv.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
     alertDiv.style.backgroundColor = type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8';
     
     alertDiv.textContent = message;
@@ -365,7 +366,7 @@ function showAlert(message, type = 'info') {
     
     setTimeout(() => {
         alertDiv.remove();
-    }, 3000);
+    }, 4000);
 }
 
 function showConfirmation(text, callback) {
