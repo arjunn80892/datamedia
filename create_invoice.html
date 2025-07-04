@@ -256,20 +256,20 @@
     });
 
     async function initializePage() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('invoiceDate').value = today;
-        document.getElementById('dueDate').value = today;
-        setupEventListeners();
-        
-        // Check for invoice ID in URL for editing
-        const urlParams = new URLSearchParams(window.location.search);
-        const invoiceId = urlParams.get('edit') || urlParams.get('id');
-        if (invoiceId) {
-    isEditingInvoice = true;
-    await loadInvoiceForEditing(invoiceId);
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invoiceDate').value = today;
+    document.getElementById('dueDate').value = today;
+    setupEventListeners();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const invoiceId = urlParams.get('edit') || urlParams.get('id');
+
+    if (invoiceId) {
+        isEditingInvoice = true; // Ensure this is set before loading
+        await loadInvoiceForEditing(invoiceId);
+    }
 }
 
-    }
 
     async function loadInvoiceForEditing(invoiceId) {
     try {
@@ -578,22 +578,22 @@
 
     // --- DATA SAVING & PDF GENERATION ---
     async function saveInvoiceData() {
-      const saveButton = document.getElementById('saveButton');
-      const downloadButton = document.getElementById('downloadPdfButton');
-      const statusMessage = document.getElementById('statusMessage');
+    const saveButton = document.getElementById('saveButton');
+    const downloadButton = document.getElementById('downloadPdfButton');
+    const statusMessage = document.getElementById('statusMessage');
 
-      if (savedProducts.length === 0) {
+    if (savedProducts.length === 0) {
         statusMessage.textContent = "Please add at least one product before saving.";
         statusMessage.className = 'status-error';
         return;
-      }
+    }
 
-      saveButton.disabled = true;
-      downloadButton.disabled = true;
-      saveButton.textContent = 'Saving...';
-      statusMessage.textContent = '';
+    saveButton.disabled = true;
+    downloadButton.disabled = true;
+    saveButton.textContent = 'Saving...';
+    statusMessage.textContent = '';
 
-      const invoiceData = {
+    const invoiceData = {
         company_name: "Datamedia",
         client_name: document.getElementById("customerName").value,
         client_gstin: selectedClientForInvoice ? selectedClientForInvoice.gstin : null,
@@ -614,51 +614,52 @@
         round_off: parseFloat(document.getElementById('roundOff').value),
         grand_total: parseFloat(document.getElementById('total').textContent),
         status: 'Draft',
-      };
+    };
 
-      try {
-        let data, error;
+    try {
         const urlParams = new URLSearchParams(window.location.search);
-        const invoiceId = urlParams.get('edit');
+        const invoiceId = urlParams.get('edit') || urlParams.get('id');
+
+        let data, error;
 
         if (isEditingInvoice && invoiceId) {
-          // Update existing invoice
-          ({ data, error } = await supabaseClient
-            .from('invoices')
-            .update(invoiceData)
-            .eq('id', invoiceId)
-            .select()
-            .single());
+            // UPDATE EXISTING INVOICE
+            ({ data, error } = await supabaseClient
+                .from('invoices')
+                .update(invoiceData)
+                .eq('id', invoiceId)
+                .select()
+                .single());
         } else {
-          // Create new invoice
-          ({ data, error } = await supabaseClient
-            .from('invoices')
-            .insert(invoiceData)
-            .select()
-            .single());
+            // CREATE NEW INVOICE
+            ({ data, error } = await supabaseClient
+                .from('invoices')
+                .insert(invoiceData)
+                .select()
+                .single());
         }
 
         if (error) throw error;
 
         lastSavedInvoiceData = data;
-        statusMessage.textContent = `Invoice #${data.id} saved successfully!`;
+        statusMessage.textContent = `Invoice #${data.id} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`;
         statusMessage.className = 'status-success';
         downloadButton.disabled = false;
 
-        // Update URL if this was a new invoice
+        // If this was a new invoice, update URL to edit mode
         if (!isEditingInvoice) {
-          window.history.replaceState(null, null, `?edit=${data.id}`);
-          isEditingInvoice = true;
+            window.history.replaceState(null, null, `?edit=${data.id}`);
+            isEditingInvoice = true;
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Save error:', error);
         statusMessage.textContent = 'Error: ' + error.message;
         statusMessage.className = 'status-error';
-      } finally {
+    } finally {
         saveButton.disabled = false;
-        saveButton.textContent = 'Save Invoice';
-      }
+        saveButton.textContent = isEditingInvoice ? 'Update Invoice' : 'Save Invoice';
     }
+}
 
     function generateAndDownloadPdf() {
       if (!lastSavedInvoiceData) {
