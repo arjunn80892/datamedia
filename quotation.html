@@ -185,7 +185,7 @@
     document.addEventListener('DOMContentLoaded', async function() {
       const { data: { user } } = await supabaseClient.auth.getUser();
       if (!user) {
-        window.location.href = 'login.html';
+        window.location.href = 'index.html';
       } else {
         document.body.style.visibility = 'visible';
         initializePage();
@@ -450,30 +450,58 @@
         };
     }
 
-    async function saveOrUpdateQuotation(showAlert = true) {
-        const quotationData = getQuotationDataFromForm();
-        if (!quotationData) return null;
-        const { id, ...dataToSave } = quotationData;
-        let result, error;
-        if (id) {
-            const { data, error: updateError } = await supabaseClient.from('quotations').update(dataToSave).eq('id', id).select().single();
-            result = data; error = updateError;
-        } else {
-            const { data, error: insertError } = await supabaseClient.from('quotations').insert([dataToSave]).select().single();
-            result = data; error = insertError;
-        }
-        if (error) {
-            console.error('Error saving quotation:', error);
-            if (showAlert) alert(`Failed to save quotation: ${error.message}`);
-            return null;
-        }
-        if (showAlert) alert(id ? '✅ Quotation updated successfully!' : '✅ Quotation saved successfully!');
-        quotationIdInput.value = result.id;
-        window.history.replaceState({}, '', `?id=${result.id}`);
-        lastSavedQuotationData = { ...result, ...quotationData };
-        return lastSavedQuotationData;
+    let isSaving = false;
+
+async function saveOrUpdateQuotation(showAlert = true) {
+    if (isSaving) return null; // Prevent duplicate save
+    isSaving = true;
+
+    const quotationData = getQuotationDataFromForm();
+    if (!quotationData) {
+        isSaving = false;
+        return null;
     }
 
+    const { id, ...dataToSave } = quotationData;
+    let result, error;
+
+    if (id) {
+        const { data, error: updateError } = await supabaseClient
+            .from('quotations')
+            .update(dataToSave)
+            .eq('id', id)
+            .select()
+            .single();
+        result = data;
+        error = updateError;
+    } else {
+        const { data, error: insertError } = await supabaseClient
+            .from('quotations')
+            .insert([dataToSave])
+            .select()
+            .single();
+        result = data;
+        error = insertError;
+    }
+
+    isSaving = false;
+
+    if (error) {
+        console.error('Error saving quotation:', error);
+        if (showAlert) alert(`Failed to save quotation: ${error.message}`);
+        return null;
+    }
+
+    if (showAlert) {
+        alert(id ? '✅ Quotation updated successfully!' : '✅ Quotation saved successfully!');
+    }
+
+    quotationIdInput.value = result.id;
+    window.history.replaceState({}, '', `?id=${result.id}`);
+    lastSavedQuotationData = { ...result, ...quotationData };
+
+    return lastSavedQuotationData;
+}
     async function loadQuotationForEdit(id) {
         const { data: q, error } = await supabaseClient.from('quotations').select('*').eq('id', id).single();
         if (error) {
