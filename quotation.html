@@ -298,7 +298,9 @@
         savedProductsBody.addEventListener('click', handleTableClick);
         saveQuotationBtn.addEventListener('click', () => saveOrUpdateQuotation(true));
         generatePdfBtn.addEventListener('click', generateQuotationPDF);
-        document.querySelector('.actions .back').addEventListener('click', () => window.history.back());
+        document.querySelector('.actions .back').addEventListener('click', () => {
+        window.location.href = "dashboard.html";
+        });
         document.querySelector('.actions .cancel').addEventListener('click', newQuotation);
     }
 
