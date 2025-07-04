@@ -457,6 +457,80 @@ function addProduct() {
     updateTotals(); 
     clearProductInputs();
 }
+// --- SEARCH & DATA FETCHING ---
+const debouncedClientSearch = debounce(async (query) => {
+    const resultsContainer = document.getElementById('clientSearchResultsContainer');
+    if (query.length < 1) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    const { data, error } = await supabaseClient
+        .from('customers')
+        .select('id, name, address, phone, gstin')
+        .ilike('name', `%${query}%`);
+
+    resultsContainer.innerHTML = '';
+    if (error || !data.length) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    
+    data.forEach(client => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.textContent = `${client.name} (${client.phone || 'No Phone'})`;
+        item.onclick = () => selectClient(client);
+        resultsContainer.appendChild(item);
+    });
+    resultsContainer.style.display = 'block';
+}, 300);
+
+const debouncedProductSearch = debounce(async (query) => {
+    const resultsContainer = document.getElementById('productSearchResultsContainer');
+    if (query.length < 1) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+    const { data, error } = await supabaseClient
+        .from('products')
+        .select('*')
+        .or(`name.ilike.%${query}%,code.ilike.%${query}%`);
+
+    resultsContainer.innerHTML = '';
+    if (error || !data.length) {
+        resultsContainer.style.display = 'none';
+        return;
+    }
+
+    data.forEach(product => {
+        const item = document.createElement('div');
+        item.className = 'search-result-item';
+        item.textContent = `${product.name} (${product.brand || 'N/A'})`;
+        item.onclick = () => selectProduct(product);
+        resultsContainer.appendChild(item);
+    });
+    resultsContainer.style.display = 'block';
+}, 300);
+
+function selectClient(client) {
+    selectedClientForQuotation = client;
+    clientNameInput.value = client.name;
+    billingAddressInput.value = client.address || '';
+    clientSearchInput.value = client.name;
+    clientSearchResultsContainer.style.display = 'none';
+}
+
+function selectProduct(product) {
+    selectedProductForAdding = product;
+    productNameInput.value = product.name;
+    brandInput.value = product.brand || '';
+    unitSelect.value = product.uom || 'Nos';
+    descriptionInput.value = product.description || '';
+    priceInput.value = product.price || '';
+    productSearchInput.value = product.name;
+    productSearchResultsContainer.style.display = 'none';
+    quantityInput.focus();
+}
 
 function renderTable() {
     savedProductsBody.innerHTML = '';
