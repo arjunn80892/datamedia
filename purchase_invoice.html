@@ -586,127 +586,77 @@
 
     // --- DATA SAVING & PDF GENERATION ---
     async function saveInvoiceData() {
-        const saveButton = document.getElementById('saveButton');
-        const downloadButton = document.getElementById('downloadPdfButton');
-        const statusMessage = document.getElementById('statusMessage');
-
-        if (savedProducts.length === 0) {
-            statusMessage.textContent = "Please add at least one product before saving.";
-            statusMessage.className = 'status-error';
-            return;
-        }
-
-        saveButton.disabled = true;
-        downloadButton.disabled = true;
-        saveButton.textContent = 'Saving...';
-        statusMessage.textContent = '';
-
-        
-                const now = new Date();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-
-        // Get count of existing invoices for this month & year
-        const { count, error: countError } = await supabaseClient
-          .from('purchase_invoices')
-          .select('*', { count: 'exact', head: true })
-          .gte('invoice_date', `${year}-${month}-01`)
-          .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01`);
-
-
-        if (countError) {
-            console.error("Error getting monthly count", countError);
-            throw countError;
-        }
-
-        const monthlyNumber = ((count || 0) + 1).toString().padStart(4, '0');
-        const invoiceNumber = `PUR-${monthlyNumber}-${month}-${year}`;
-
-
-        const invoiceData = {
-            company_name: "Datamedia",
-            vendor_name: document.getElementById("vendorName").value,
-            vendor_gstin: selectedVendorForInvoice ? selectedVendorForInvoice.gstin : null,
-            branch_name: document.getElementById("branchSelect").value,
-            vendor_address: document.getElementById("vendorAddress").value,
-            invoice_date: document.getElementById("invoiceDate").value,
-            due_date: document.getElementById("dueDate").value,
-            tax_type: document.getElementById("taxType").value,
-            remarks: document.getElementById("remarks").value,
-            terms: document.getElementById("terms").value,
-            reference_number: document.getElementById("referenceNumber").value,
-            products: savedProducts,
-            subtotal: parseFloat(document.getElementById('subtotal').textContent),
-            cgst: parseFloat(document.getElementById('cgst').textContent),
-            sgst: parseFloat(document.getElementById('sgst').textContent),
-            igst: parseFloat(document.getElementById('igst').textContent),
-            round_off: parseFloat(document.getElementById('roundOff').value),
-            grand_total: parseFloat(document.getElementById('total').textContent),
-            status: 'Draft',
-            invoice_number: invoiceNumber
-        };
-
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const invoiceId = urlParams.get('edit') || urlParams.get('id');
-
-            let data, error;
-
-            if (isEditingInvoice && invoiceId) {
-                    // ✅ UPDATE EXISTING INVOICE
-                    ({ data, error } = await supabaseClient
-                        .from('purchase_invoices')
-                        .update(invoiceData)
-                        .eq('id', invoiceId)
-                        .select()
-                        .single());
-
-                    if (!error && data) {
-                        const autoId = data.invoice_number_id;
-                        const invoiceNumber = `PUR-${new Date().getFullYear()}-${autoId.toString().padStart(4, '0')}`;
-
-                        // Now update the row with the generated invoice number
-                        await supabaseClient
-                            .from('purchase_invoices')
-                            .update({ invoice_number: invoiceNumber })
-                            .eq('id', data.id);
-
-                        data.invoice_number = invoiceNumber; // Add this for use in UI/alerts
-                        }
-
-            } else {
-                // CREATE NEW INVOICE
-                ({ data, error } = await supabaseClient
-                    .from('purchase_invoices')
-                    .insert(invoiceData)
-                    .select()
-                    .single());
-                
-                // Increment invoice number only for new invoices
-                if (!error) nextPurchaseInvoiceNumber++;
-            }
-
-            if (error) throw error;
-
-            lastSavedInvoiceData = data;
-            statusMessage.textContent = `Purchase Invoice #${data.invoice_number} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`;
-            statusMessage.className = 'status-success';
-            downloadButton.disabled = false;
-
-            // If this was a new invoice, update URL to edit mode
-            if (!isEditingInvoice) {
-                window.history.replaceState(null, null, `?edit=${data.id}`);
-                isEditingInvoice = true;
-            }
-        } catch (error) {
-            console.error('Save error:', error);
-            statusMessage.textContent = 'Error: ' + error.message;
-            statusMessage.className = 'status-error';
-        } finally {
-            saveButton.disabled = false;
-            saveButton.textContent = isEditingInvoice ? 'Update Invoice' : 'Save Invoice';
-        }
+    if (savedProducts.length === 0) {
+        alert("Please add at least one product before saving.");
+        return;
     }
+
+    // Generate a simple, unique invoice number
+    const now = new Date();
+    const invoiceNumber = `PUR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getTime()).slice(-4)}`;
+
+    const invoiceData = {
+        // This 'id' logic is for your database's auto-incrementing primary key
+        id: isEditingInvoice ? lastSavedInvoiceData.id : undefined,
+
+        // The human-readable invoice number
+        invoice_number: document.getElementById('invoiceNumberDisplay')?.textContent || invoiceNumber, // Use existing number if editing
+
+        company_name: "Datamedia",
+        vendor_name: document.getElementById("vendorName").value,
+        vendor_gstin: selectedVendorForInvoice ? selectedVendorForInvoice.gstin : null,
+        vendor_address: document.getElementById("vendorAddress").value,
+        invoice_date: document.getElementById("invoiceDate").value,
+        due_date: document.getElementById("dueDate").value,
+        tax_type: document.getElementById("taxType").value,
+        remarks: document.getElementById("remarks").value,
+        terms: document.getElementById("terms").value,
+        reference_number: document.getElementById("referenceNumber").value,
+        products: savedProducts,
+        subtotal: parseFloat(document.getElementById('subtotal').textContent),
+        cgst: parseFloat(document.getElementById('cgst').textContent),
+        sgst: parseFloat(document.getElementById('sgst').textContent),
+        igst: parseFloat(document.getElementById('igst').textContent),
+        round_off: parseFloat(document.getElementById('roundOff')?.value || 0), // Use optional chaining for safety
+        grand_total: parseFloat(document.getElementById('total').textContent),
+        status: 'Draft'
+    };
+    
+    try {
+        let data, error;
+        if (isEditingInvoice) {
+            // UPDATE EXISTING INVOICE
+            ({ data, error } = await supabaseClient
+                .from('purchase_invoices')
+                .update(invoiceData)
+                .eq('id', invoiceData.id)
+                .select()
+                .single());
+        } else {
+            // CREATE NEW INVOICE
+            ({ data, error } = await supabaseClient
+                .from('purchase_invoices')
+                .insert(invoiceData)
+                .select()
+                .single());
+        }
+
+        if (error) throw error;
+
+        lastSavedInvoiceData = data;
+        alert(`Purchase Invoice #${data.invoice_number} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`);
+
+        // If this was a new invoice, update URL to edit mode
+        if (!isEditingInvoice) {
+            window.history.replaceState(null, null, `?id=${data.id}`);
+            isEditingInvoice = true;
+        }
+
+    } catch (error) {
+        console.error('Save error:', error);
+        alert('Error saving invoice: ' + error.message);
+    }
+}
 
     function generateAndDownloadPdf() {
         if (!lastSavedInvoiceData) {

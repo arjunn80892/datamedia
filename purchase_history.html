@@ -169,31 +169,34 @@
     }
 
     function renderTable(purchasesToRender) {
-      const tbody = document.querySelector('#purchaseTable tbody');
-      tbody.innerHTML = '';
-      if (!purchasesToRender || purchasesToRender.length === 0) {
+    const tbody = document.querySelector('#purchaseTable tbody');
+    tbody.innerHTML = '';
+    if (!purchasesToRender || purchasesToRender.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" class="no-data">No purchase invoices found.</td></tr>`;
         return;
-      }
-      
-      purchasesToRender.forEach(purchase => {
-        const totalTax = (purchase.cgst || 0) + (purchase.sgst || 0) + (purchase.igst || 0);
+    }
+    
+    purchasesToRender.forEach(purchase => {
         const row = document.createElement('tr');
         row.innerHTML = `
-          <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
-          <td>${purchase.purchase_number || 'PUR-NOT-SET'}</td>
-          <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
-          <td>${purchase.supplier_name || 'N/A'}</td>
-          <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
-          <td>₹${(purchase.grand_total || 0).toFixed(2)}</td>
-          <td>
-            <button class="btn btn-primary btn-sm" onclick="viewPurchase('${purchase.id}')">View/Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deletePurchase(${purchase.id})">Delete</button>
-          </td>
+            <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
+            
+            <td>${purchase.invoice_number || 'PUR-NOT-SET'}</td>
+            
+            <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+            
+            <td>${purchase.vendor_name || 'N/A'}</td>
+            
+            <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
+            <td>₹${(purchase.grand_total || 0).toFixed(2)}</td>
+            <td>
+                <button class="btn btn-primary btn-sm" onclick="viewPurchase('${purchase.id}')">View/Edit</button>
+                <button class="btn btn-danger btn-sm" onclick="deletePurchase(${purchase.id})">Delete</button>
+            </td>
         `;
         tbody.appendChild(row);
-      });
-    }
+    });
+}
 
     // --- PURCHASE ACTIONS ---
     async function deletePurchase(id) {
