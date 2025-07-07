@@ -1,5 +1,5 @@
 
-   <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -144,26 +144,26 @@
     setupEventListeners();
   });
 
-  async function fetchPurchases() {
-    const tbody = document.querySelector('#purchaseTable tbody');
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
+ async function fetchPurchases() {
+  const tbody = document.querySelector('#purchaseTable tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
 
-    const { data, error } = await supabaseClient
-      .from('purchase_invoices')
-      .select('*')
-      .order('invoice_date', { ascending: false });
+  const { data, error } = await supabaseClient
+    .from('purchase_invoices')
+    .select('*')
+    .order('invoice_date', { ascending: false, nullsFirst: false }); // ✅ FIXED
 
-    console.log("Database response:", { data, error });
+  console.log("Database response:", { data, error });
 
-    if (error) {
-      console.error("Error loading:", error);
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
-      return;
-    }
-
-    allPurchases = data;
-    renderTable(allPurchases);
+  if (error) {
+    console.error("Error loading:", error);
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
+    return;
   }
+
+  allPurchases = data;
+  renderTable(allPurchases);
+}
 
   function renderTable(purchases) {
     const tbody = document.querySelector('#purchaseTable tbody');
