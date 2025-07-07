@@ -283,28 +283,40 @@
         const { data: invoiceData, error: invoiceError } = await supabaseClient
             .from('purchase_invoices')
             .select('*')
-            // CORRECTED: Using your actual column name
-            .eq('invoice_number_id', invoiceId)
+            .eq('id', invoiceId)  // ✅ Fixed: Use 'id' instead of 'invoice_number_id'
             .single();
 
         if (invoiceError) throw invoiceError;
 
-        // Populate the form fields...
+        // Populate the form fields
         document.getElementById('vendorName').value = invoiceData.vendor_name || '';
         document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
-        document.getElementById('invoiceDate').value = invoiceData.invoice_date.split('T')[0];
-        document.getElementById('dueDate').value = invoiceData.due_date.split('T')[0];
-        // ... (rest of your form population logic) ...
+        document.getElementById('invoiceDate').value = invoiceData.invoice_date?.split('T')[0] || '';
+        document.getElementById('dueDate').value = invoiceData.due_date?.split('T')[0] || '';
+        document.getElementById("referenceNumber").value = invoiceData.reference_number || '';
+        document.getElementById("remarks").value = invoiceData.remarks || '';
+        document.getElementById("terms").value = invoiceData.terms || '';
+        document.getElementById("taxType").value = invoiceData.tax_type || 'cgst_sgst';
 
+        // Tax buttons sync
+        if (invoiceData.tax_type === "cgst_sgst") {
+            document.querySelector('.tax-toggle-btn[data-value="cgst_sgst"]')?.classList.add("active");
+        } else {
+            document.querySelector('.tax-toggle-btn[data-value="igst"]')?.classList.add("active");
+        }
+
+        // Load products and recalculate totals
         savedProducts = invoiceData.products || [];
         renderProductsTable();
         updateTotals();
+
         lastSavedInvoiceData = invoiceData;
 
     } catch (error) {
         console.error('Error loading invoice:', error.message);
         alert('Failed to load invoice data.');
     }
+
 }
     // --- DEBOUNCE UTILITY ---
     function debounce(func, delay) {
@@ -567,11 +579,11 @@
         let result, error;
 
         if (isEditingInvoice) {
-            const existingId = lastSavedInvoiceData.invoice_number_id;
+            const existingId = lastSavedInvoiceData.id; // ✅ Use 'id' instead of 'invoice_number_id'
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
-                .eq('invoice_number_id', existingId)
+                .eq('id', existingId) // ✅ Fix: Use 'id'
                 .select()
                 .single());
         } else {
@@ -585,13 +597,13 @@
             if (error) throw error;
 
             // Generate invoice_number like PUR-1
-            const generatedId = result.invoice_number_id;
+            const generatedId = result.id; // ✅ Use 'id' now
             const formattedNumber = `PUR-${generatedId}`;
 
             const { error: updateError } = await supabaseClient
                 .from('purchase_invoices')
                 .update({ invoice_number: formattedNumber })
-                .eq('invoice_number_id', generatedId);
+                .eq('id', generatedId); // ✅ Use 'id' here too
 
             if (updateError) throw updateError;
 
@@ -604,7 +616,7 @@
         isEditingInvoice = true;
 
         alert(`Purchase Invoice #${result.invoice_number} ${lastSavedInvoiceData ? 'Updated' : 'Saved'} Successfully!`);
-        window.history.replaceState(null, null, `?id=${result.invoice_number_id}`);
+        window.history.replaceState(null, null, `?id=${result.id}`); // ✅ Use 'id' in the URL now
 
     } catch (err) {
         console.error('Save error:', err);
@@ -613,6 +625,7 @@
 
     document.getElementById('downloadPdfButton').disabled = false;
 }
+
 
     function generateAndDownloadPdf() {
         if (!lastSavedInvoiceData) {
@@ -800,4 +813,3 @@
 </script>
 </body>
 </html>
-
