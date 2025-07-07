@@ -543,7 +543,6 @@
         return;
     }
 
-    // Build the data object from the form fields
     const invoiceData = {
         company_name: "Datamedia",
         vendor_name: document.getElementById("vendorName").value,
@@ -568,53 +567,53 @@
         let result, error;
 
         if (isEditingInvoice) {
-            // UPDATE logic for an existing invoice
             const existingId = lastSavedInvoiceData.invoice_number_id;
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
-                .eq('invoice_number_id', existingId) // FIXED: Uses your correct ID column
+                .eq('invoice_number_id', existingId)
                 .select()
                 .single());
         } else {
-            // INSERT logic for a new invoice
-            // FIXED: Correctly generates the invoice number you want
-            const now = new Date();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const { count, error: countError } = await supabaseClient
-                .from('purchase_invoices')
-                .select('*', { count: 'exact', head: true })
-                .gte('invoice_date', `${year}-${month}-01T00:00:00.000Z`)
-                .lt('invoice_date', `${year}-${String(Number(month) + 1).padStart(2, '0')}-01T00:00:00.000Z`);
-            
-            if (countError) throw countError;
-
-            const monthlyNumber = (count + 1).toString().padStart(4, '0');
-            invoiceData.invoice_number = `PUR-${monthlyNumber}-${month}-${year}`;
-
+            // INSERT new invoice
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .insert(invoiceData)
                 .select()
                 .single());
+
+            if (error) throw error;
+
+            // Generate invoice_number like PUR-1
+            const generatedId = result.invoice_number_id;
+            const formattedNumber = `PUR-${generatedId}`;
+
+            const { error: updateError } = await supabaseClient
+                .from('purchase_invoices')
+                .update({ invoice_number: formattedNumber })
+                .eq('invoice_number_id', generatedId);
+
+            if (updateError) throw updateError;
+
+            result.invoice_number = formattedNumber;
         }
 
         if (error) throw error;
 
-        // --- Success ---
-        lastSavedInvoiceData = result; 
-        isEditingInvoice = true; // Set to true after saving
+        lastSavedInvoiceData = result;
+        isEditingInvoice = true;
+
         alert(`Purchase Invoice #${result.invoice_number} ${lastSavedInvoiceData ? 'Updated' : 'Saved'} Successfully!`);
-        
-        // FIXED: Correctly update the URL with the ID
         window.history.replaceState(null, null, `?id=${result.invoice_number_id}`);
 
     } catch (err) {
         console.error('Save error:', err);
         alert('Error saving invoice: ' + err.message);
     }
+
+    document.getElementById('downloadPdfButton').disabled = false;
 }
+
     function generateAndDownloadPdf() {
         if (!lastSavedInvoiceData) {
             alert("Please save the invoice successfully before downloading the PDF.");
@@ -801,3 +800,4 @@
 </script>
 </body>
 </html>
+
