@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+
+   <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -127,269 +128,223 @@
   </div>
 
 <script>
-    // --- SUPABASE CONFIGURATION ---
-    const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // --- SUPABASE CONFIGURATION ---
+  const SUPABASE_URL = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // --- GLOBAL STATE ---
-    let allPurchases = [];
-    const { jsPDF } = window.jspdf;
+  let allPurchases = [];
+  const { jsPDF } = window.jspdf;
 
-    // --- AUTHENTICATION & INITIALIZATION ---
-    document.addEventListener('DOMContentLoaded', async () => {
-      const { data: { user } } = await supabaseClient.auth.getUser();
-      if (!user) {
-        window.location.href = 'index.html';
-      } else {
-        document.body.style.visibility = 'visible';
-        await fetchPurchases();
-        setupEventListeners();
-      }
-    });
+  document.addEventListener('DOMContentLoaded', async () => {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) return window.location.href = 'index.html';
+    document.body.style.visibility = 'visible';
+    await fetchPurchases();
+    setupEventListeners();
+  });
 
-    // --- DATA FETCHING & RENDERING ---
-    async function fetchPurchases() {
+  async function fetchPurchases() {
     const tbody = document.querySelector('#purchaseTable tbody');
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
 
     const { data, error } = await supabaseClient
-        .from('purchase_invoices')
-        .select('*')
-        .order('invoice_date', { ascending: false });
+      .from('purchase_invoices')
+      .select('*')
+      .order('invoice_date', { ascending: false });
 
-    // --- ADD THIS LINE HERE ---
     console.log("Database response:", { data, error });
 
     if (error) {
-        console.error("Error loading purchase invoices:", error);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
-        return;
+      console.error("Error loading:", error);
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:red">Error: ${error.message}</td></tr>`;
+      return;
     }
 
     allPurchases = data;
     renderTable(allPurchases);
-}
-    function renderTable(purchasesToRender) {
+  }
+
+  function renderTable(purchases) {
     const tbody = document.querySelector('#purchaseTable tbody');
     tbody.innerHTML = '';
-    if (!purchasesToRender || purchasesToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="no-data">No purchase invoices found.</td></tr>`;
-        return;
+
+    if (!purchases || purchases.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="no-data">No purchase invoices found.</td></tr>`;
+      return;
     }
-    
-    purchasesToRender.forEach(purchase => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td><input type="checkbox" class="rowCheckbox" value="${purchase.id}" /></td>
-            
-            <td>${purchase.invoice_number || 'PUR-NOT-SET'}</td>
-            
-            <td>${purchase.invoice_date ? new Date(purchase.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
-            
-            <td>${purchase.vendor_name || 'N/A'}</td>
-            
-            <td>${purchase.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
-            <td>₹${(purchase.grand_total || 0).toFixed(2)}</td>
-            <td>
-                <button class="btn btn-primary btn-sm" onclick="viewPurchase('${purchase.id}')">View/Edit</button>
-                <button class="btn btn-danger btn-sm" onclick="deletePurchase(${purchase.id})">Delete</button>
-            </td>
-        `;
-        tbody.appendChild(row);
+
+    purchases.forEach(p => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><input type="checkbox" class="rowCheckbox" value="${p.id}" /></td>
+        <td>${p.invoice_number || `PUR-${p.id}`}</td>
+        <td>${p.invoice_date ? new Date(p.invoice_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+        <td>${p.vendor_name || 'N/A'}</td>
+        <td>${p.tax_type === 'cgst_sgst' ? 'CGST+SGST' : 'IGST'}</td>
+        <td>₹${(p.grand_total || 0).toFixed(2)}</td>
+        <td>
+          <button class="btn btn-primary btn-sm" onclick="viewPurchase('${p.id}')">View/Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deletePurchase(${p.id})">Delete</button>
+        </td>`;
+      tbody.appendChild(row);
     });
-}
+  }
 
-    // --- PURCHASE ACTIONS ---
-    async function deletePurchase(id) {
-        if (!confirm(`Are you sure you want to delete Purchase PUR-${id}? This cannot be undone.`)) return;
-        const { error } = await supabaseClient.from('purchase_invoices').delete().eq('id', id);
-        if (error) {
-            showNotification(`Error: ${error.message}`, 'danger');
-        } else {
-            showNotification(`Purchase PUR-${id} deleted successfully.`, 'success');
-            fetchPurchases();
-        }
+  async function deletePurchase(id) {
+    if (!confirm(`Delete Purchase PUR-${id}? This cannot be undone.`)) return;
+    const { error } = await supabaseClient.from('purchase_invoices').delete().eq('id', id);
+    if (error) return showNotification(`Error: ${error.message}`, 'danger');
+    showNotification(`Purchase PUR-${id} deleted.`, 'success');
+    fetchPurchases();
+  }
+
+  async function deleteSelected() {
+    const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+    if (ids.length === 0) return showNotification("No invoices selected.", 'danger');
+    if (!confirm(`Delete ${ids.length} selected invoices?`)) return;
+    const { error } = await supabaseClient.from('purchase_invoices').delete().in('id', ids);
+    if (error) return showNotification(`Error: ${error.message}`, 'danger');
+    showNotification(`${ids.length} invoice(s) deleted.`, 'success');
+    fetchPurchases();
+  }
+
+  function exportPurchasesToExcel() {
+    if (!allPurchases.length) return alert("No data to export.");
+
+    const rows = [["Purchase #", "Date", "Supplier", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
+    allPurchases.forEach(p => {
+      const totalTax = (p.cgst || 0) + (p.sgst || 0) + (p.igst || 0);
+      rows.push([
+        p.invoice_number || `PUR-${p.id}`,
+        p.invoice_date ? new Date(p.invoice_date).toLocaleDateString('en-IN') : '',
+        p.vendor_name || '-',
+        p.tax_type || '-',
+        (p.subtotal || 0).toFixed(2),
+        totalTax.toFixed(2),
+        (p.grand_total || 0).toFixed(2)
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Purchases');
+    XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function viewPurchase(id) {
+    window.location.href = `purchase_invoice.html?edit=${id}`;
+  }
+
+  async function generatePurchasePDF(p) {
+    const doc = new jsPDF();
+    doc.setFontSize(20).text('PURCHASE INVOICE', 105, 20, { align: 'center' });
+    doc.setFontSize(12).text(`${p.invoice_number || `PUR-${p.id}`}`, 105, 30, { align: 'center' });
+
+    doc.text(`Date: ${new Date(p.invoice_date).toLocaleDateString()}`, 15, 40);
+    doc.text(`Supplier: ${p.vendor_name || '-'}`, 15, 50);
+
+    doc.autoTable({
+      startY: 60,
+      head: [['Description', 'Quantity', 'Rate', 'Amount']],
+      body: (p.products || []).map(item => [
+        item.description || '',
+        item.quantity,
+        `₹${item.rate?.toFixed(2) || '0.00'}`,
+        `₹${(item.quantity * item.rate).toFixed(2)}`
+      ]),
+      margin: { top: 10 }
+    });
+
+    const y = doc.lastAutoTable.finalY + 10;
+    doc.text(`Subtotal: ₹${(p.subtotal || 0).toFixed(2)}`, 150, y);
+    if (p.tax_type === 'cgst_sgst') {
+      doc.text(`CGST: ₹${(p.cgst || 0).toFixed(2)}`, 150, y + 10);
+      doc.text(`SGST: ₹${(p.sgst || 0).toFixed(2)}`, 150, y + 20);
+    } else {
+      doc.text(`IGST: ₹${(p.igst || 0).toFixed(2)}`, 150, y + 10);
     }
-    
-    async function deleteSelected() {
-        const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
-        if (selectedIds.length === 0) {
-            showNotification("No purchase invoices selected.", 'danger');
-            return;
-        }
-        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected purchase invoice(s)?`)) return;
-        const { error } = await supabaseClient.from('purchase_invoices').delete().in('id', selectedIds);
-        if (error) {
-            showNotification(`Error: ${error.message}`, 'danger');
-        } else {
-            showNotification(`${selectedIds.length} purchase invoice(s) deleted successfully.`, 'success');
-            fetchPurchases();
-        }
-    }
+    doc.text(`Grand Total: ₹${(p.grand_total || 0).toFixed(2)}`, 150, y + 30);
 
-    function exportPurchasesToExcel() {
-      const dataToExport = allPurchases;
-      if (!dataToExport.length) return alert("No purchase invoices to export.");
-      
-      const rows = [["Purchase #", "Date", "Supplier", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
-      dataToExport.forEach(purchase => {
-        const totalTax = (purchase.cgst || 0) + (purchase.sgst || 0) + (purchase.igst || 0);
-        rows.push([
-          `PUR-${purchase.id}`,
-          purchase.invoice_date,
-          purchase.supplier_name,
-          purchase.tax_type,
-          (purchase.subtotal || 0).toFixed(2),
-          totalTax.toFixed(2),
-          (purchase.grand_total || 0).toFixed(2)
-        ]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Purchases');
-      XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
-    }
-    
-    function viewPurchase(purchaseId) {
-  window.location.href = `purchase_invoice.html?edit=${purchaseId}`;
-}
+    return doc.output('blob');
+  }
 
+  async function downloadSelectedPurchases() {
+    const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
+    if (!ids.length) return showNotification("No invoices selected.", 'danger');
 
+    showNotification(`Generating ${ids.length} PDF(s)...`, 'info');
 
-    // --- PDF GENERATION & ZIP DOWNLOAD ---
-    async function generatePurchasePDF(purchase) {
-      const doc = new jsPDF();
-      
-      // Add header
-      doc.setFontSize(20);
-      doc.text('PURCHASE INVOICE', 105, 20, { align: 'center' });
-      doc.setFontSize(12);
-      doc.text(`${purchase.purchase_number || 'PUR-' + purchase.id}`, 105, 30, { align: 'center' });
-      
-      // Supplier and date info
-      doc.text(`Date: ${new Date(purchase.invoice_date).toLocaleDateString()}`, 15, 40);
-      doc.text(`Supplier: ${purchase.supplier_name}`, 15, 50);
-      
-      // Add line items table
-      doc.autoTable({
-        startY: 60,
-        head: [['Description', 'Quantity', 'Rate', 'Amount']],
-        body: purchase.items.map(item => [
-          item.description,
-          item.quantity,
-          `₹${item.rate.toFixed(2)}`,
-          `₹${(item.quantity * item.rate).toFixed(2)}`
-        ]),
-        margin: { top: 10 }
-      });
-      
-      // Add totals
-      const finalY = doc.lastAutoTable.finalY + 10;
-      doc.text(`Subtotal: ₹${purchase.subtotal.toFixed(2)}`, 150, finalY);
-      if (purchase.tax_type === 'cgst_sgst') {
-        doc.text(`CGST (${purchase.cgst_rate}%): ₹${purchase.cgst.toFixed(2)}`, 150, finalY + 10);
-        doc.text(`SGST (${purchase.sgst_rate}%): ₹${purchase.sgst.toFixed(2)}`, 150, finalY + 20);
-      } else {
-        doc.text(`IGST (${purchase.igst_rate}%): ₹${purchase.igst.toFixed(2)}`, 150, finalY + 10);
-      }
-      doc.text(`Grand Total: ₹${purchase.grand_total.toFixed(2)}`, 150, finalY + 30);
-      
-      return doc.output('blob');
-    }
+    try {
+      const zip = new JSZip();
+      const { data, error } = await supabaseClient.from('purchase_invoices').select('*').in('id', ids);
+      if (error) throw error;
 
-    async function downloadSelectedPurchases() {
-      const selectedIds = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
-      if (selectedIds.length === 0) {
-        showNotification("No purchase invoices selected.", 'danger');
-        return;
+      for (const p of data) {
+        const blob = await generatePurchasePDF(p);
+        zip.file(`${p.invoice_number || `PUR-${p.id}`}.pdf`, blob);
       }
 
-      showNotification(`Preparing ${selectedIds.length} purchase invoice(s) for download...`, 'info');
-      
-      try {
-        const zip = new JSZip();
-        const { data: purchases, error } = await supabaseClient
-          .from('purchase_invoices')
-          .select('*')
-          .in('id', selectedIds);
-        
-        if (error) throw error;
-        
-        for (const purchase of purchases) {
-          const pdfBlob = await generatePurchasePDF(purchase);
-          zip.file(`${purchase.purchase_number || 'PUR-' + purchase.id}.pdf`, pdfBlob);
-        }
-        
-        const content = await zip.generateAsync({ type: 'blob' });
-        saveAs(content, `purchases_${new Date().toISOString().slice(0,10)}.zip`);
-        showNotification(`${selectedIds.length} purchase invoice(s) downloaded successfully.`, 'success');
-      } catch (error) {
-        console.error("Error generating ZIP:", error);
-        showNotification(`Error: ${error.message}`, 'danger');
-      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, `purchases_${new Date().toISOString().slice(0, 10)}.zip`);
+      showNotification(`${ids.length} PDF(s) downloaded.`, 'success');
+    } catch (e) {
+      console.error(e);
+      showNotification("Error generating ZIP.", 'danger');
     }
+  }
 
-    // --- FILTERING LOGIC ---
-    function applyFilters() {
+  function applyFilters() {
     const search = document.getElementById('searchInput').value.toLowerCase();
     const from = document.getElementById('fromDate').value;
     const to = document.getElementById('toDate').value;
     const tax = document.getElementById('taxFilter').value;
 
-    const filtered = allPurchases.filter(purchase => {
-      const date = purchase.invoice_date?.split("T")[0]; // handle date string
-      const dateValid = (!from || date >= from) && (!to || date <= to);
-      const textMatch =
-        (purchase.supplier_name || '').toLowerCase().includes(search) ||
-        (purchase.purchase_number || '').toLowerCase().includes(search);
-      const taxMatch = !tax || purchase.tax_type === tax;
-
-      return dateValid && textMatch && taxMatch;
+    const filtered = allPurchases.filter(p => {
+      const date = p.invoice_date?.split("T")[0];
+      const dateMatch = (!from || date >= from) && (!to || date <= to);
+      const searchMatch = (p.vendor_name || '').toLowerCase().includes(search) || (p.invoice_number || '').toLowerCase().includes(search);
+      const taxMatch = !tax || p.tax_type === tax;
+      return dateMatch && searchMatch && taxMatch;
     });
 
     renderTable(filtered);
   }
 
-    
-    function resetFilters() {
-        document.getElementById('searchInput').value = '';
-        document.getElementById('fromDate').value = '';
-        document.getElementById('toDate').value = '';
-        document.getElementById('taxFilter').value = '';
-        renderTable(allPurchases);
-    }
+  function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('fromDate').value = '';
+    document.getElementById('toDate').value = '';
+    document.getElementById('taxFilter').value = '';
+    renderTable(allPurchases);
+  }
 
-    // --- UTILITY FUNCTIONS ---
-    function showNotification(message, type = 'success') {
-      const div = document.createElement('div');
-      div.className = `notification`;
-      div.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
-      div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
-      document.body.appendChild(div);
-      setTimeout(() => {
-        div.style.opacity = '0';
-        setTimeout(() => div.remove(), 300);
-      }, 3000);
-    }
+  function showNotification(message, type = 'success') {
+    const div = document.createElement('div');
+    div.className = 'notification';
+    div.style.backgroundColor = type === 'success' ? 'var(--success)' : 'var(--danger)';
+    div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+    document.body.appendChild(div);
+    setTimeout(() => {
+      div.style.opacity = '0';
+      setTimeout(() => div.remove(), 300);
+    }, 3000);
+  }
 
-    // --- EVENT LISTENERS ---
-    function setupEventListeners() {
-      document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
-      document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
-      document.getElementById('exportBtn').addEventListener('click', exportPurchasesToExcel);
-      document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedPurchases);
-      document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
-      document.getElementById('toggleAllCheckbox').addEventListener('click', (e) => {
-          document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = e.target.checked);
-      });
-    }
-    
-    // Make functions accessible from HTML onclick attributes
-    window.viewPurchase = viewPurchase;
-    window.deletePurchase = deletePurchase;
-    window.downloadSelectedPurchases = downloadSelectedPurchases;
+  function setupEventListeners() {
+    document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
+    document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
+    document.getElementById('exportBtn').addEventListener('click', exportPurchasesToExcel);
+    document.getElementById('downloadSelectedBtn').addEventListener('click', downloadSelectedPurchases);
+    document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+    document.getElementById('toggleAllCheckbox').addEventListener('click', (e) => {
+      document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = e.target.checked);
+    });
+  }
 
-</script>
+  window.viewPurchase = viewPurchase;
+  window.deletePurchase = deletePurchase;
+  window.downloadSelectedPurchases = downloadSelectedPurchases;
+</script>  
 </body>
 </html>
