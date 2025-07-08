@@ -40,6 +40,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
         th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
         th { background-color: var(--highlight); color: white; font-weight: 500; position: sticky; top: 0; }
+        td .btn { margin-right: 5px; }
         tr:nth-child(even) { background-color: #f8f9fa; }
         tr:hover { background-color: #f1f3f5; }
         .status-badge {
@@ -169,15 +170,12 @@
     async function loadQuotations() {
         showLoading(true);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
-
         try {
             const { data, error } = await supabaseClient
                 .from('quotations')
                 .select('*')
                 .order('created_at', { ascending: false });
-
             if (error) throw error;
-
             allQuotations = data;
             filteredQuotations = [...allQuotations];
             renderTable(filteredQuotations);
@@ -191,7 +189,7 @@
 
     function renderTable(quotationsToRender) {
         if (!quotationsToRender || !quotationsToRender.length) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No quotations found matching your criteria</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No quotations found.</td></tr>';
             return;
         }
         
@@ -204,7 +202,7 @@
                 <td>${q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A'}</td>
                 <td>${q.client_name || 'N/A'}</td>
                 <td><span class="status-badge status-${status}">${status}</span></td>
-                <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                 <td>
                     <button class="btn btn-primary btn-sm" onclick="viewQuotation(${q.id})" title="Edit Quotation"><i class="fas fa-edit"></i></button>
                     <button class="btn btn-success btn-sm" onclick="convertToInvoice(${q.id})" title="Convert to Invoice"><i class="fas fa-file-invoice"></i></button>
@@ -214,8 +212,6 @@
         `}).join('');
     }
 
-    // --- ACTIONS ---
-
     // ✅ NEW FUNCTION TO HANDLE THE CONVERSION
     async function convertToInvoice(quotationId) {
         if (!confirm('Are you sure you want to convert this quotation to an invoice?')) {
@@ -224,7 +220,6 @@
         showLoading(true);
 
         try {
-            // 1. Fetch the full quotation data
             const { data: quotation, error: fetchError } = await supabaseClient
                 .from('quotations')
                 .select('*')
@@ -238,7 +233,6 @@
                 return;
             }
 
-            // 2. Prepare the data for the new invoice
             const invoiceData = {
                 client_name: quotation.client_name,
                 client_gstin: quotation.client_gstin,
@@ -256,13 +250,11 @@
                 status: 'Draft'
             };
 
-            // 3. Generate a new invoice number using your database function
             const { data: newInvoiceNumber, error: rpcError } = await supabaseClient.rpc('generate_yearly_invoice_number');
             if (rpcError) throw rpcError;
             
             invoiceData.invoice_number = newInvoiceNumber;
 
-            // 4. Insert the new record into the 'invoices' table
             const { data: newInvoice, error: insertError } = await supabaseClient
                 .from('invoices')
                 .insert(invoiceData)
@@ -271,13 +263,11 @@
 
             if (insertError) throw insertError;
             
-            // 5. Update the original quotation's status
             await supabaseClient
                 .from('quotations')
                 .update({ status: 'Converted' })
                 .eq('id', quotationId);
 
-            // 6. Alert the user and redirect to the new invoice
             alert(`Successfully converted quotation to Invoice #${newInvoiceNumber}! You will now be redirected.`);
             window.location.href = `create_invoice.html?id=${newInvoice.id}`;
 
@@ -289,21 +279,21 @@
         }
     }
 
+    // --- OTHER ACTION FUNCTIONS ---
     function viewQuotation(id) {
         window.location.href = `quotation.html?id=${id}`;
     }
         
     async function deleteQuotation(id) {
-        if (!confirm(`Are you sure you want to delete Quotation QUO-${id}? This cannot be undone.`)) return;
+        if (!confirm(`Are you sure you want to delete this quotation?`)) return;
         showLoading(true);
         try {
             const { error } = await supabaseClient.from('quotations').delete().eq('id', id);
             if (error) throw error;
-            showNotification(`Quotation QUO-${id} deleted successfully.`, 'success');
+            showNotification(`Quotation deleted successfully.`, 'success');
             loadQuotations();
-        } catch (error) {
-            console.error('Error deleting quotation:', error);
-            showNotification(`Error: Failed to delete quotation. ${error.message}`, 'error');
+        } catch(error) {
+            showNotification(`Error deleting quotation: ${error.message}`, 'error');
         } finally {
             showLoading(false);
         }
@@ -311,39 +301,30 @@
     
     async function deleteSelected() {
         const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
-        if (selectedIds.length === 0) {
-            return showNotification("No quotations selected.", 'warning');
-        }
+        if (selectedIds.length === 0) return showNotification("No quotations selected.", 'warning');
         if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected quotation(s)?`)) return;
         showLoading(true);
         try {
             const { error } = await supabaseClient.from('quotations').delete().in('id', selectedIds);
             if (error) throw error;
-            showNotification(`${selectedIds.length} quotation(s) deleted successfully.`, 'success');
+            showNotification(`${selectedIds.length} quotation(s) deleted.`, 'success');
             loadQuotations();
         } catch (error) {
-            console.error('Error deleting selected quotations:', error);
-            showNotification(`Error: Failed to delete. ${error.message}`, 'error');
+            showNotification(`Error: ${error.message}`, 'error');
         } finally {
             showLoading(false);
         }
     }
 
     function exportToExcel() {
-        if (!filteredQuotations.length) {
-            return showNotification("No quotations to export.", 'warning');
-        }
+        if (!filteredQuotations.length) return showNotification("No quotations to export.", 'warning');
         try {
-            const rows = [
-                ["Quotation ID", "Date", "Client", "Tax Rule", "Subtotal", "Total Tax", "Grand Total", "Status"]
-            ];
+            const rows = [ ["Quotation #", "Date", "Client", "Tax Rule", "Total", "Status"] ];
             filteredQuotations.forEach(q => rows.push([
                 q.quotation_number || `QUO-${q.id}`,
                 q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A',
                 q.client_name || 'N/A',
-                q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST',
-                (q.subtotal || 0).toFixed(2),
-                (q.total_tax || 0).toFixed(2),
+                q.tax_rule || 'N/A',
                 (q.grand_total || 0).toFixed(2),
                 (q.status || 'draft').toUpperCase()
             ]));
@@ -351,23 +332,18 @@
             const ws = XLSX.utils.aoa_to_sheet(rows);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Quotations");
-            XLSX.writeFile(wb, `quotation_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+            XLSX.writeFile(wb, `quotations_${new Date().toISOString().slice(0,10)}.xlsx`);
             showNotification("Export completed successfully.", 'success');
         } catch (error) {
-            console.error('Error exporting to Excel:', error);
-            showNotification(`Error: Failed to export. ${error.message}`, 'error');
+            showNotification(`Error exporting: ${error.message}`, 'error');
         }
     }
     
     function viewSelected() {
         const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
-        if (!selectedIds.length) {
-            return showNotification("No quotations selected to view.", 'warning');
-        }
+        if (!selectedIds.length) return showNotification("No quotations selected.", 'warning');
         window.location.href = `quotation.html?id=${selectedIds[0]}`;
-        selectedIds.slice(1).forEach(id => {
-            window.open(`quotation.html?id=${id}`, '_blank');
-        });
+        selectedIds.slice(1).forEach(id => window.open(`quotation.html?id=${id}`, '_blank'));
     }
 
     // --- FILTERING LOGIC ---
@@ -388,9 +364,7 @@
         });
         
         renderTable(filteredQuotations);
-        if (filteredQuotations.length === 0) {
-            showNotification("No quotations match your filter criteria.", 'warning');
-        }
+        if (filteredQuotations.length === 0) showNotification("No quotations match your filter criteria.", 'warning');
     }
     
     function resetFilters() {
@@ -410,7 +384,7 @@
     function showNotification(message, type = 'success') {
         const div = document.createElement('div');
         div.className = `notification ${type}`;
-        div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+        div.innerHTML = `<i class="fas fa-fw fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i> ${message}`;
         document.body.appendChild(div);
         setTimeout(() => {
             div.style.opacity = '0';
