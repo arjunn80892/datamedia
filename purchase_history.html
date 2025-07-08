@@ -211,25 +211,33 @@
   function exportPurchasesToExcel() {
     if (!allPurchases.length) return alert("No data to export.");
 
-    const rows = [["Purchase #", "Date", "Supplier", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
+    // ✅ UPDATED: Added "CGST" and "SGST" to the header row.
+    const headers = ["Purchase #", "Date", "Supplier", "Tax Type", "Subtotal", "CGST", "SGST", "IGST", "Total Tax", "Grand Total"];
+    const rows = [headers];
+    
     allPurchases.forEach(p => {
-      const totalTax = (p.cgst || 0) + (p.sgst || 0) + (p.igst || 0);
-      rows.push([
-        p.invoice_number || `PUR-${p.id}`,
-        p.invoice_date ? new Date(p.invoice_date).toLocaleDateString('en-IN') : '',
-        p.vendor_name || '-',
-        p.tax_type || '-',
-        (p.subtotal || 0).toFixed(2),
-        totalTax.toFixed(2),
-        (p.grand_total || 0).toFixed(2)
-      ]);
+        const totalTax = (p.cgst || 0) + (p.sgst || 0) + (p.igst || 0);
+        
+        // ✅ UPDATED: Added the corresponding data for each invoice.
+        rows.push([
+            p.invoice_number || `PUR-${p.id}`,
+            p.invoice_date ? new Date(p.invoice_date).toLocaleDateString('en-IN') : '',
+            p.vendor_name || '-',
+            p.tax_type || '-',
+            (p.subtotal || 0).toFixed(2),
+            (p.cgst || 0).toFixed(2),      // CGST value
+            (p.sgst || 0).toFixed(2),      // SGST value
+            (p.igst || 0).toFixed(2),      // IGST value
+            totalTax.toFixed(2),
+            (p.grand_total || 0).toFixed(2)
+        ]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Purchases');
     XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
-  }
+}
 
       // This is the correct function
     function viewPurchase(id) {
