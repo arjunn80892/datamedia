@@ -836,7 +836,8 @@
     doc.setFontSize(8).text("This is a computer generated invoice", 105, footerY + 59, { align: "center" });
     
     doc.save(`${invoiceNumber}.pdf`);
-}  function toWords(num) {
+}  
+function toWords(num) {
     if (isNaN(num)) return "Invalid Amount";
 
     const rupees = Math.floor(num);
