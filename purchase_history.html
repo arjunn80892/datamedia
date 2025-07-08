@@ -243,15 +243,19 @@
     doc.text(`Date: ${new Date(p.invoice_date).toLocaleDateString()}`, 15, 40);
     doc.text(`Supplier: ${p.vendor_name || '-'}`, 15, 50);
 
+    // ✅ This is the new line you requested.
+    doc.text(`GSTIN: ${p.vendor_gstin || '-'}`, 15, 55);
+
     doc.autoTable({
-        startY: 60,
+        // ✅ Adjusted startY to make space for the GSTIN line.
+        startY: 65,
         head: [['Product Name', 'Quantity', 'Price', 'Amount']],
-        // ✅ The fix is in the 'body' section below
         body: (p.products || []).map(item => [
-            item.productName || item.description || '', // Use productName as primary
+            item.productName || item.description || '',
             item.quantity,
-            `₹${item.price?.toFixed(2) || '0.00'}`, // Changed item.rate to item.price
-            `₹${(item.quantity * item.price).toFixed(2)}` // Changed item.rate to item.price
+            `₹${item.price?.toFixed(2) || '0.00'}`,
+            // ✅ Made this calculation safer to prevent errors.
+            `₹${(item.quantity * (item.price || 0)).toFixed(2)}`
         ]),
         margin: { top: 10 }
     });
