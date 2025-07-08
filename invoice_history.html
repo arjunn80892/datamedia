@@ -223,29 +223,37 @@
         }
     }
 
-    function exportInvoicesToExcel() {
-      const dataToExport = allInvoices;
-      if (!dataToExport.length) return alert("No invoices to export.");
-      
-      const rows = [["Invoice #", "Date", "Client", "Tax Type", "Subtotal", "Total Tax", "Grand Total"]];
-      dataToExport.forEach(inv => {
-        const totalTax = (inv.cgst || 0) + (inv.sgst || 0) + (inv.igst || 0);
-        rows.push([
-          `INV-${inv.id}`,
-          inv.invoice_date,
-          inv.client_name,
-          inv.tax_type,
-          (inv.subtotal || 0).toFixed(2),
-          totalTax.toFixed(2),
-          (inv.grand_total || 0).toFixed(2)
-        ]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
-      XLSX.writeFile(wb, `invoice_history_${new Date().toISOString().slice(0,10)}.xlsx`);
-    }
+function exportInvoicesToExcel() {
+    const dataToExport = allInvoices;
+    if (!dataToExport.length) return alert("No invoices to export.");
     
+    // ✅ UPDATED: Added "CGST" and "SGST" to the header row.
+    const headers = ["Invoice #", "Date", "Client", "Tax Type", "Subtotal", "CGST", "SGST", "IGST", "Total Tax", "Grand Total"];
+    const rows = [headers];
+    
+    dataToExport.forEach(inv => {
+        const totalTax = (inv.cgst || 0) + (inv.sgst || 0) + (inv.igst || 0);
+        
+        // ✅ UPDATED: Added the corresponding data for each invoice.
+        rows.push([
+            inv.invoice_number || `INV-${inv.id}`, // Use the real invoice number if it exists
+            inv.invoice_date ? new Date(inv.invoice_date).toLocaleDateString('en-IN') : '',
+            inv.client_name,
+            inv.tax_type,
+            (inv.subtotal || 0).toFixed(2),
+            (inv.cgst || 0).toFixed(2),     // CGST value
+            (inv.sgst || 0).toFixed(2),     // SGST value
+            (inv.igst || 0).toFixed(2),     // IGST value
+            totalTax.toFixed(2),
+            (inv.grand_total || 0).toFixed(2)
+        ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Invoices');
+    XLSX.writeFile(wb, `invoice_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+}    
     function viewInvoice(id) {
       window.location.href = `create_invoice.html?id=${id}`;
     }
