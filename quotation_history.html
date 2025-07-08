@@ -219,7 +219,7 @@
             </a>
             <button class="btn btn-danger" onclick="deleteQuotation(${q.id})" style="padding: 5px 10px;" title="Delete Quotation">
                 <i class="fas fa-trash"></i>
-            <button class="btn btn-success btn-sm" onclick="convertToInvoice(${q.id})">Convert</button>
+            <button class="btn btn-success btn-sm" onclick="convertToInvoice(${q.id})" title="Convert to Invoice" style="margin-left: 10px;"><i class="fas fa-file-invoice"></i></button>
             </button>
           </td>
         </tr>
@@ -499,3 +499,4 @@ window.convertToInvoice = convertToInvoice;
 </script>
 </body>
 </html>
+
