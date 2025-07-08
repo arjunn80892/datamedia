@@ -278,42 +278,52 @@
     }
 }
 
-   async function loadInvoiceForEditing(invoiceId) {
-  try {
-    const { data: invoiceData, error: invoiceError } = await supabaseClient
-      .from('purchase_invoices')
-      .select('*')
-      .eq('invoice_number_id', invoiceId) // ✅ FIXED HERE
-      .single();
+  async function loadInvoiceForEditing(invoiceId) {
+    try {
+        const { data: invoiceData, error: invoiceError } = await supabaseClient
+            .from('purchase_invoices')
+            .select('*')
+            .eq('id', invoiceId) // ✅ FIX: Changed 'invoice_number_id' to 'id'
+            .single();
 
-    if (invoiceError) throw invoiceError;
+        if (invoiceError) throw invoiceError;
+        if (!invoiceData) {
+            alert(`No invoice found with ID: ${invoiceId}`);
+            return;
+        }
 
-    // Populate all fields from invoiceData
-    document.getElementById('vendorName').value = invoiceData.vendor_name || '';
-    document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
-    document.getElementById('invoiceDate').value = invoiceData.invoice_date?.split('T')[0] || '';
-    document.getElementById('dueDate').value = invoiceData.due_date?.split('T')[0] || '';
-    document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
-    document.getElementById('remarks').value = invoiceData.remarks || '';
-    document.getElementById('terms').value = invoiceData.terms || '';
-    document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
+        // Populate all fields from invoiceData
+        document.getElementById('vendorName').value = invoiceData.vendor_name || '';
+        document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
+        // Set the search input as well for user clarity
+        document.getElementById('vendorSearchInput').value = invoiceData.vendor_name || '';
+        document.getElementById('invoiceDate').value = invoiceData.invoice_date?.split('T')[0] || '';
+        document.getElementById('dueDate').value = invoiceData.due_date?.split('T')[0] || '';
+        document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
+        document.getElementById('remarks').value = invoiceData.remarks || '';
+        document.getElementById('terms').value = invoiceData.terms || '';
+        document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
+        
+        // Display the invoice number if it exists
+        if (invoiceData.invoice_number) {
+            document.getElementById('invoiceNumberDisplay').textContent = invoiceData.invoice_number;
+        }
 
-    // Activate tax buttons
-    document.querySelectorAll('.tax-toggle-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.value === invoiceData.tax_type);
-    });
+        // Activate tax buttons
+        document.querySelectorAll('.tax-toggle-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === invoiceData.tax_type);
+        });
 
-    savedProducts = invoiceData.products || [];
-    renderProductsTable();
-    updateTotals();
-    lastSavedInvoiceData = invoiceData;
+        savedProducts = invoiceData.products || [];
+        renderProductsTable();
+        updateTotals();
+        lastSavedInvoiceData = invoiceData; // Store the full correct data
 
-  } catch (error) {
-    console.error('Error loading invoice:', error.message);
-    alert('Failed to load invoice data.');
-  }
+    } catch (error) {
+        console.error('Error loading invoice:', error.message);
+        alert('Failed to load invoice data.');
+    }
 }
-
     // --- DEBOUNCE UTILITY ---
     function debounce(func, delay) {
         let timeout;
@@ -574,16 +584,18 @@
     try {
         let result, error;
 
-        if (isEditingInvoice) {
-           const existingId = lastSavedInvoiceData.invoice_number_id;
+        if (isEditingInvoice && lastSavedInvoiceData && lastSavedInvoiceData.id) {
+            // --- UPDATE existing invoice ---
+            const existingId = lastSavedInvoiceData.id; // ✅ FIX: Use '.id' instead of '.invoice_number_id'
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
-                .eq('id', existingId) // ✅ Fix: Use 'id'
+                .eq('id', existingId) // Match by the primary key 'id'
                 .select()
                 .single());
+
         } else {
-            // INSERT new invoice
+            // --- INSERT new invoice ---
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .insert(invoiceData)
@@ -592,27 +604,29 @@
 
             if (error) throw error;
 
-            // Generate invoice_number like PUR-1
-            const generatedId = result.id; // ✅ Use 'id' now
+            // Generate invoice_number like PUR-1 using the new record's primary ID
+            const generatedId = result.id;
             const formattedNumber = `PUR-${generatedId}`;
 
             const { error: updateError } = await supabaseClient
                 .from('purchase_invoices')
                 .update({ invoice_number: formattedNumber })
-                .eq('id', generatedId); // ✅ Use 'id' here too
+                .eq('id', generatedId);
 
             if (updateError) throw updateError;
-
-            result.invoice_number = formattedNumber;
+            
+            result.invoice_number = formattedNumber; // Add the number to our current object
         }
 
         if (error) throw error;
 
         lastSavedInvoiceData = result;
-        isEditingInvoice = true;
+        isEditingInvoice = true; // It's now in edit mode for subsequent saves
 
-        alert(`Purchase Invoice #${result.invoice_number} ${lastSavedInvoiceData ? 'Updated' : 'Saved'} Successfully!`);
-        window.history.replaceState(null, null, `?id=${result.id}`); // ✅ Use 'id' in the URL now
+        // Update UI elements
+        document.getElementById('invoiceNumberDisplay').textContent = result.invoice_number;
+        alert(`Purchase Invoice #${result.invoice_number} has been saved successfully!`);
+        window.history.replaceState(null, null, `?id=${result.id}`); // Update URL with the correct ID
 
     } catch (err) {
         console.error('Save error:', err);
@@ -621,7 +635,6 @@
 
     document.getElementById('downloadPdfButton').disabled = false;
 }
-
 
     function generateAndDownloadPdf() {
         if (!lastSavedInvoiceData) {
