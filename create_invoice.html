@@ -642,7 +642,7 @@
         let result, error;
 
         if (isEditingInvoice && invoiceId) {
-            // --- UPDATE an existing invoice ---
+            // --- UPDATE logic for existing invoices remains the same ---
             ({ data: result, error } = await supabaseClient
                 .from('invoices')
                 .update(invoiceData)
@@ -651,44 +651,31 @@
                 .single());
 
         } else {
-            // --- CREATE a new invoice using bigserial for numbering ---
-            
-            // 1. Insert the record without an invoice number to get the new ID.
+            // ✅ --- CREATE a new invoice using the yearly reset logic ---
+
+            // 1. Call the database function to get the new invoice number.
+            const { data: newInvoiceNumber, error: rpcError } = await supabaseClient.rpc('generate_yearly_invoice_number');
+            if (rpcError) throw rpcError;
+
+            // 2. Add the new number to our data object.
+            invoiceData.invoice_number = newInvoiceNumber;
+
+            // 3. Insert the complete record in a single step.
             ({ data: result, error } = await supabaseClient
                 .from('invoices')
                 .insert(invoiceData)
                 .select()
                 .single());
-
-            if (error) throw error;
-
-            // 2. Generate the invoice number using the new ID.
-            const generatedId = result.id;
-            const formattedNumber = `INV-${generatedId}`; // Example: "INV-101"
-
-            // 3. Update the new record with the generated invoice number.
-            const { error: updateError } = await supabaseClient
-                .from('invoices')
-                .update({ invoice_number: formattedNumber })
-                .eq('id', generatedId);
-
-            if (updateError) throw updateError;
-
-            // 4. Add the new number to our current data object for immediate use.
-            result.invoice_number = formattedNumber;
         }
 
         if (error) throw error;
 
         lastSavedInvoiceData = result;
-        // ✅ Use the correct invoice number in the success message.
         statusMessage.textContent = `Invoice #${result.invoice_number} ${isEditingInvoice ? 'Updated' : 'Saved'} Successfully!`;
         statusMessage.className = 'status-success';
         downloadButton.disabled = false;
 
-        // If this was a new invoice, update the URL to edit mode.
         if (!isEditingInvoice) {
-            // ✅ Use the standard 'id' parameter for consistency.
             window.history.replaceState(null, null, `?id=${result.id}`);
             isEditingInvoice = true;
         }
