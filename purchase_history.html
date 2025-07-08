@@ -1,5 +1,4 @@
-
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -245,30 +244,30 @@
     doc.text(`Supplier: ${p.vendor_name || '-'}`, 15, 50);
 
     doc.autoTable({
-      startY: 60,
-      head: [['Description', 'Quantity', 'Rate', 'Amount']],
-      body: (p.products || []).map(item => [
-        item.description || '',
-        item.quantity,
-        `₹${item.rate?.toFixed(2) || '0.00'}`,
-        `₹${(item.quantity * item.rate).toFixed(2)}`
-      ]),
-      margin: { top: 10 }
+        startY: 60,
+        head: [['Product Name', 'Quantity', 'Price', 'Amount']],
+        // ✅ The fix is in the 'body' section below
+        body: (p.products || []).map(item => [
+            item.productName || item.description || '', // Use productName as primary
+            item.quantity,
+            `₹${item.price?.toFixed(2) || '0.00'}`, // Changed item.rate to item.price
+            `₹${(item.quantity * item.price).toFixed(2)}` // Changed item.rate to item.price
+        ]),
+        margin: { top: 10 }
     });
 
     const y = doc.lastAutoTable.finalY + 10;
     doc.text(`Subtotal: ₹${(p.subtotal || 0).toFixed(2)}`, 150, y);
     if (p.tax_type === 'cgst_sgst') {
-      doc.text(`CGST: ₹${(p.cgst || 0).toFixed(2)}`, 150, y + 10);
-      doc.text(`SGST: ₹${(p.sgst || 0).toFixed(2)}`, 150, y + 20);
+        doc.text(`CGST: ₹${(p.cgst || 0).toFixed(2)}`, 150, y + 10);
+        doc.text(`SGST: ₹${(p.sgst || 0).toFixed(2)}`, 150, y + 20);
     } else {
-      doc.text(`IGST: ₹${(p.igst || 0).toFixed(2)}`, 150, y + 10);
+        doc.text(`IGST: ₹${(p.igst || 0).toFixed(2)}`, 150, y + 10);
     }
     doc.text(`Grand Total: ₹${(p.grand_total || 0).toFixed(2)}`, 150, y + 30);
 
     return doc.output('blob');
-  }
-
+}
   async function downloadSelectedPurchases() {
     const ids = Array.from(document.querySelectorAll('.rowCheckbox:checked')).map(cb => cb.value);
     if (!ids.length) return showNotification("No invoices selected.", 'danger');
