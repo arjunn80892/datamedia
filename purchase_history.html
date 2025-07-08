@@ -231,9 +231,10 @@
     XLSX.writeFile(wb, `purchase_history_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
-  function viewPurchase(id) {
-    window.location.href = `purchase_invoice.html?edit=${id}`;
-  }
+      // This is the correct function
+    function viewPurchase(id) {
+     window.location.href = `purchase_invoice.html?id=${id}`;
+    }
 
   async function generatePurchasePDF(p) {
     const doc = new jsPDF();
