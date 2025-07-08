@@ -1,162 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Quotation History</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    :root {
-      --primary: #4361ee; --secondary: #3f37c9; --danger: #f72585;
-      --success: #28a745; --highlight: #00adb5; --dark: #212529;
-      --light: #f8f9fa; --gray: #6c757d; --warning: #ffc107;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { background-color: #f5f7fb; color: var(--dark); line-height: 1.6; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); padding: 30px; }
-    h2 { text-align: center; color: var(--dark); margin-bottom: 1.5rem; font-size: 1.8rem; position: relative; padding-bottom: 0.5rem; }
-    h2::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 3px; background-color: var(--highlight); }
-    .filter-section { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-    .filter-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: center; }
-    .filter-group { flex: 1; min-width: 200px; }
-    label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--gray); font-size: 0.9rem; }
-    input, select { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; transition: all 0.3s ease; }
-    input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1); }
-    .action-buttons { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
-    .btn {
-      padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 500; cursor: pointer;
-      border: none; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;
-    }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-    .btn-primary { background-color: var(--primary); color: white; }
-    .btn-success { background-color: var(--success); color: white; }
-    .btn-danger { background-color: var(--danger); color: white; }
-    .btn-warning { background-color: var(--warning); color: var(--dark); }
-    .btn-outline { background-color: transparent; border: 1px solid var(--gray); color: var(--gray); }
-    .btn-icon { font-size: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
-    th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
-    th { background-color: var(--highlight); color: white; font-weight: 500; position: sticky; top: 0; }
-    tr:nth-child(even) { background-color: #f8f9fa; }
-    tr:hover { background-color: #f1f3f5; }
-    .status-badge {
-      padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500;
-    }
-    .status-draft { background-color: #e2e3e5; color: #383d41; }
-    .status-sent { background-color: #d1ecf1; color: #0c5460; }
-    .status-approved { background-color: #d4edda; color: #155724; }
-    .status-rejected { background-color: #f8d7da; color: #721c24; }
-    .notification {
-      position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white;
-      padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      display: flex; align-items: center; gap: 0.5rem; z-index: 1000; animation: slideIn 0.3s ease-out;
-    }
-    .notification.error { background-color: var(--danger); }
-    .notification.warning { background-color: var(--warning); color: var(--dark); }
-    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-    .loading-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(255,255,255,0.8); display: flex; justify-content: center;
-      align-items: center; z-index: 1000; display: none;
-    }
-    .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3;
-      border-top: 4px solid var(--highlight); border-radius: 50%; animation: spin 1s linear infinite;
-    }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @media (max-width: 768px) {
-      .filter-group { min-width: 100%; }
-      .action-buttons { flex-direction: column; }
-      .btn { width: 100%; }
-      table { display: block; overflow-x: auto; white-space: nowrap;}
-    }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Quotation History</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee; --secondary: #3f37c9; --danger: #f72585;
+            --success: #28a745; --highlight: #00adb5; --dark: #212529;
+            --light: #f8f9fa; --gray: #6c757d; --warning: #ffc107;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f5f7fb; color: var(--dark); line-height: 1.6; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); padding: 30px; }
+        h2 { text-align: center; color: var(--dark); margin-bottom: 1.5rem; font-size: 1.8rem; position: relative; padding-bottom: 0.5rem; }
+        h2::after { content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 80px; height: 3px; background-color: var(--highlight); }
+        .filter-section { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+        .filter-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; align-items: center; }
+        .filter-group { flex: 1; min-width: 200px; }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--gray); font-size: 0.9rem; }
+        input, select { width: 100%; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 0.9rem; transition: all 0.3s ease; }
+        input:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1); }
+        .action-buttons { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+        .btn {
+            padding: 0.75rem 1.25rem; border-radius: 6px; font-weight: 500; cursor: pointer;
+            border: none; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.5rem;
+        }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-success { background-color: var(--success); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-warning { background-color: var(--warning); color: var(--dark); }
+        .btn-outline { background-color: transparent; border: 1px solid var(--gray); color: var(--gray); }
+        .btn-icon { font-size: 1rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+        th, td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: var(--highlight); color: white; font-weight: 500; position: sticky; top: 0; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #f1f3f5; }
+        .status-badge {
+            padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+        }
+        .status-draft { background-color: #e2e3e5; color: #383d41; }
+        .status-sent { background-color: #d1ecf1; color: #0c5460; }
+        .status-approved { background-color: #d4edda; color: #155724; }
+        .status-rejected { background-color: #f8d7da; color: #721c24; }
+        .status-converted { background-color: var(--success); color: white; }
+        .notification {
+            position: fixed; bottom: 20px; right: 20px; background-color: var(--success); color: white;
+            padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: flex; align-items: center; gap: 0.5rem; z-index: 1000; animation: slideIn 0.3s ease-out;
+        }
+        .notification.error { background-color: var(--danger); }
+        .notification.warning { background-color: var(--warning); color: var(--dark); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .loading-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.8); display: flex; justify-content: center;
+            align-items: center; z-index: 1000; display: none;
+        }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--highlight); border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+            .filter-group { min-width: 100%; }
+            .action-buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            table { display: block; overflow-x: auto; white-space: nowrap;}
+        }
+    </style>
 </head>
 <body>
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-  </div>
-
-  <div class="container">
-    <h2>Quotation History</h2>
-
-    <div class="filter-section">
-      <div class="filter-row">
-        <div class="filter-group">
-          <label for="searchInput">Search by Client or Ref #</label>
-          <input type="text" id="searchInput" placeholder="Enter name or reference number">
-        </div>
-        <div class="filter-group">
-          <label for="fromDate">From Date</label>
-          <input type="date" id="fromDate">
-        </div>
-        <div class="filter-group">
-          <label for="toDate">To Date</label>
-          <input type="date" id="toDate">
-        </div>
-        <div class="filter-group">
-          <label for="taxFilter">Tax Rule</label>
-          <select id="taxFilter">
-            <option value="">All Rules</option>
-            <option value="cgst_sgst">CGST + SGST</option>
-            <option value="igst">IGST</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label for="statusFilter">Status</label>
-          <select id="statusFilter">
-            <option value="">All Statuses</option>
-            <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </div>
-      </div>
-      <div class="action-buttons">
-        <button class="btn btn-primary" id="applyFilterBtn">
-          <i class="fas fa-filter btn-icon"></i> Apply Filters
-        </button>
-        <button class="btn btn-outline" id="resetFilterBtn">
-          <i class="fas fa-undo btn-icon"></i> Reset
-        </button>
-      </div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
     </div>
 
-    <div class="action-buttons">
-      <button class="btn btn-success" id="exportBtn">
-        <i class="fas fa-file-excel"></i> Export to Excel
-      </button>
-      <button class="btn btn-primary" id="viewSelectedBtn">
-        <i class="fas fa-eye"></i> View/Edit Selected
-      </button>
-      <button class="btn btn-danger" id="deleteSelectedBtn">
-        <i class="fas fa-trash"></i> Delete Selected
-      </button>
-      <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">
-        <i class="fas fa-arrow-left"></i> Back to Dashboard
-      </button>
-    </div>
+    <div class="container">
+        <h2>Quotation History</h2>
 
-    <table id="quotationTable">
-      <thead>
-        <tr>
-          <th><input type="checkbox" id="toggleAllCheckbox"></th>
-          <th>Quotation ID</th>
-          <th>Date</th>
-          <th>Client Name</th>
-          <th>Tax Rule</th>
-          <th>Status</th>
-          <th>Total (₹)</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="8" style="text-align:center">Loading...</td></tr>
-      </tbody>
-    </table>
-  </div>
+        <div class="filter-section">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="searchInput">Search by Client or Ref #</label>
+                    <input type="text" id="searchInput" placeholder="Enter name or reference number">
+                </div>
+                <div class="filter-group">
+                    <label for="fromDate">From Date</label>
+                    <input type="date" id="fromDate">
+                </div>
+                <div class="filter-group">
+                    <label for="toDate">To Date</label>
+                    <input type="date" id="toDate">
+                </div>
+                <div class="filter-group">
+                    <label for="statusFilter">Status</label>
+                    <select id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="draft">Draft</option>
+                        <option value="sent">Sent</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="Converted">Converted</option>
+                    </select>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" id="applyFilterBtn">
+                    <i class="fas fa-filter btn-icon"></i> Apply Filters
+                </button>
+                <button class="btn btn-outline" id="resetFilterBtn">
+                    <i class="fas fa-undo btn-icon"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-success" id="exportBtn">
+                <i class="fas fa-file-excel"></i> Export to Excel
+            </button>
+            <button class="btn btn-primary" id="viewSelectedBtn">
+                <i class="fas fa-eye"></i> View/Edit Selected
+            </button>
+            <button class="btn btn-danger" id="deleteSelectedBtn">
+                <i class="fas fa-trash"></i> Delete Selected
+            </button>
+            <button class="btn btn-outline" onclick="window.location.href='dashboard.html'">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+        </div>
+
+        <table id="quotationTable">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="toggleAllCheckbox"></th>
+                    <th>Quotation ID</th>
+                    <th>Date</th>
+                    <th>Client Name</th>
+                    <th>Status</th>
+                    <th>Total (₹)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="7" style="text-align:center">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
 
 <script>
     // --- SUPABASE CONFIGURATION ---
@@ -164,256 +158,287 @@
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // --- GLOBAL STATE ---
+    // --- GLOBAL STATE & DOM ELEMENTS ---
     let allQuotations = [];
     let filteredQuotations = [];
-
-    // --- DOM ELEMENTS ---
     const tbody = document.querySelector('#quotationTable tbody');
     const toggleAllCheckbox = document.getElementById('toggleAllCheckbox');
     const loadingOverlay = document.getElementById('loadingOverlay');
 
     // --- DATA LOADING AND RENDERING ---
     async function loadQuotations() {
-      showLoading(true);
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Loading...</td></tr>';
+        showLoading(true);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">Loading...</td></tr>';
 
-      try {
-        const { data, error } = await supabaseClient
-          .from('quotations')
-          .select('*')
-          .order('quotation_date', { ascending: false });
+        try {
+            const { data, error } = await supabaseClient
+                .from('quotations')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) throw error;
+            if (error) throw error;
 
-        allQuotations = data;
-        filteredQuotations = [...allQuotations];
-        renderTable(filteredQuotations);
-      } catch (error) {
-        console.error("Error loading quotations:", error);
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:red">Error loading data: ${error.message}</td></tr>`;
-        showNotification(`Error loading quotations: ${error.message}`, 'error');
-      } finally {
-        showLoading(false);
-      }
+            allQuotations = data;
+            filteredQuotations = [...allQuotations];
+            renderTable(filteredQuotations);
+        } catch (error) {
+            console.error("Error loading quotations:", error);
+            showNotification(`Error loading quotations: ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+        }
     }
 
     function renderTable(quotationsToRender) {
-      if (!quotationsToRender || !quotationsToRender.length) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">No quotations found matching your criteria</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = quotationsToRender.map(q => `
-        <tr>
-          <td><input type="checkbox" class="select-quote" value="${q.id}"></td>
-          <td>QUO-${q.id}</td>
-          <td>${q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A'}</td>
-          <td>${q.client_name || 'N/A'}</td>
-          <td>${q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST'}</td>
-          <td><span class="status-badge status-${q.status || 'draft'}">${(q.status || 'draft').toUpperCase()}</span></td>
-          <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-          <td>
-            <a href="quotation.html?id=${q.id}" class="btn btn-primary" style="padding: 5px 10px;" title="Edit Quotation">
-                <i class="fas fa-edit"></i>
-            </a>
-            <button class="btn btn-danger" onclick="deleteQuotation(${q.id})" style="padding: 5px 10px;" title="Delete Quotation">
-                <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `).join('');
+        if (!quotationsToRender || !quotationsToRender.length) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center">No quotations found matching your criteria</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = quotationsToRender.map(q => {
+            const status = (q.status || 'draft').toLowerCase();
+            return `
+            <tr>
+                <td><input type="checkbox" class="select-quote" value="${q.id}"></td>
+                <td>${q.quotation_number || `QUO-${q.id}`}</td>
+                <td>${q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A'}</td>
+                <td>${q.client_name || 'N/A'}</td>
+                <td><span class="status-badge status-${status}">${status}</span></td>
+                <td>₹${(q.grand_total || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" onclick="viewQuotation(${q.id})" title="Edit Quotation"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-success btn-sm" onclick="convertToInvoice(${q.id})" title="Convert to Invoice"><i class="fas fa-file-invoice"></i></button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteQuotation(${q.id})" title="Delete Quotation"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `}).join('');
     }
 
-    // --- ACTIONS (DELETE, EXPORT, ETC.) ---
+    // --- ACTIONS ---
+
+    // ✅ NEW FUNCTION TO HANDLE THE CONVERSION
+    async function convertToInvoice(quotationId) {
+        if (!confirm('Are you sure you want to convert this quotation to an invoice?')) {
+            return;
+        }
+        showLoading(true);
+
+        try {
+            // 1. Fetch the full quotation data
+            const { data: quotation, error: fetchError } = await supabaseClient
+                .from('quotations')
+                .select('*')
+                .eq('id', quotationId)
+                .single();
+
+            if (fetchError) throw fetchError;
+            if (quotation.status && quotation.status.toLowerCase() === 'converted') {
+                alert('This quotation has already been converted.');
+                showLoading(false);
+                return;
+            }
+
+            // 2. Prepare the data for the new invoice
+            const invoiceData = {
+                client_name: quotation.client_name,
+                client_gstin: quotation.client_gstin,
+                billing_address: quotation.billing_address,
+                products: quotation.products,
+                subtotal: quotation.subtotal,
+                cgst: quotation.cgst,
+                sgst: quotation.sgst,
+                igst: quotation.igst,
+                grand_total: quotation.grand_total,
+                tax_type: quotation.tax_rule,
+                invoice_date: new Date().toISOString().split('T')[0],
+                due_date: new Date().toISOString().split('T')[0],
+                reference_number: `From Quotation #${quotation.quotation_number || 'QUO-'+quotation.id}`,
+                status: 'Draft'
+            };
+
+            // 3. Generate a new invoice number using your database function
+            const { data: newInvoiceNumber, error: rpcError } = await supabaseClient.rpc('generate_yearly_invoice_number');
+            if (rpcError) throw rpcError;
+            
+            invoiceData.invoice_number = newInvoiceNumber;
+
+            // 4. Insert the new record into the 'invoices' table
+            const { data: newInvoice, error: insertError } = await supabaseClient
+                .from('invoices')
+                .insert(invoiceData)
+                .select('id')
+                .single();
+
+            if (insertError) throw insertError;
+            
+            // 5. Update the original quotation's status
+            await supabaseClient
+                .from('quotations')
+                .update({ status: 'Converted' })
+                .eq('id', quotationId);
+
+            // 6. Alert the user and redirect to the new invoice
+            alert(`Successfully converted quotation to Invoice #${newInvoiceNumber}! You will now be redirected.`);
+            window.location.href = `create_invoice.html?id=${newInvoice.id}`;
+
+        } catch (error) {
+            console.error('Conversion Error:', error);
+            showNotification(`Failed to convert quotation: ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    function viewQuotation(id) {
+        window.location.href = `quotation.html?id=${id}`;
+    }
+        
     async function deleteQuotation(id) {
-      if (!confirm(`Are you sure you want to delete Quotation QUO-${id}? This cannot be undone.`)) return;
-
-      showLoading(true);
-      try {
-        const { error } = await supabaseClient.from('quotations').delete().eq('id', id);
-
-        if (error) throw error;
-
-        showNotification(`Quotation QUO-${id} deleted successfully.`, 'success');
-        loadQuotations(); // Refresh the list
-      } catch (error) {
-        console.error('Error deleting quotation:', error);
-        showNotification(`Error: Failed to delete quotation. ${error.message}`, 'error');
-      } finally {
-        showLoading(false);
-      }
+        if (!confirm(`Are you sure you want to delete Quotation QUO-${id}? This cannot be undone.`)) return;
+        showLoading(true);
+        try {
+            const { error } = await supabaseClient.from('quotations').delete().eq('id', id);
+            if (error) throw error;
+            showNotification(`Quotation QUO-${id} deleted successfully.`, 'success');
+            loadQuotations();
+        } catch (error) {
+            console.error('Error deleting quotation:', error);
+            showNotification(`Error: Failed to delete quotation. ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+        }
     }
     
     async function deleteSelected() {
-      const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
-      if (!selectedIds.length) {
-        showNotification("No quotations selected.", 'warning');
-        return;
-      }
-
-      if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected quotation(s)? This action cannot be undone.`)) return;
-
-      showLoading(true);
-      try {
-        const { error } = await supabaseClient.from('quotations').delete().in('id', selectedIds);
-        
-        if (error) throw error;
-
-        showNotification(`${selectedIds.length} quotation(s) deleted successfully.`, 'success');
-        loadQuotations(); // Refresh the list
-      } catch (error) {
-        console.error('Error deleting selected quotations:', error);
-        showNotification(`Error: Failed to delete selected quotations. ${error.message}`, 'error');
-      } finally {
-        showLoading(false);
-      }
+        const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
+        if (selectedIds.length === 0) {
+            return showNotification("No quotations selected.", 'warning');
+        }
+        if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected quotation(s)?`)) return;
+        showLoading(true);
+        try {
+            const { error } = await supabaseClient.from('quotations').delete().in('id', selectedIds);
+            if (error) throw error;
+            showNotification(`${selectedIds.length} quotation(s) deleted successfully.`, 'success');
+            loadQuotations();
+        } catch (error) {
+            console.error('Error deleting selected quotations:', error);
+            showNotification(`Error: Failed to delete. ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+        }
     }
 
     function exportToExcel() {
-      if (!filteredQuotations.length) {
-        showNotification("No quotations to export.", 'warning');
-        return;
-      }
-      
-      try {
-        const rows = [
-          ["Quotation ID", "Date", "Client", "Tax Rule", "Subtotal", "Total Tax", "Grand Total", "Status"]
-        ];
-        
-        filteredQuotations.forEach(q => rows.push([
-          `QUO-${q.id}`,
-          q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A',
-          q.client_name || 'N/A',
-          q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST',
-          (q.subtotal || 0).toFixed(2),
-          (q.total_tax || 0).toFixed(2),
-          (q.grand_total || 0).toFixed(2),
-          (q.status || 'draft').toUpperCase()
-        ]));
-        
-        const ws = XLSX.utils.aoa_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Quotations");
-        XLSX.writeFile(wb, `quotation_history_${new Date().toISOString().slice(0,10)}.xlsx`);
-        showNotification("Export completed successfully.", 'success');
-      } catch (error) {
-        console.error('Error exporting to Excel:', error);
-        showNotification(`Error: Failed to export data. ${error.message}`, 'error');
-      }
+        if (!filteredQuotations.length) {
+            return showNotification("No quotations to export.", 'warning');
+        }
+        try {
+            const rows = [
+                ["Quotation ID", "Date", "Client", "Tax Rule", "Subtotal", "Total Tax", "Grand Total", "Status"]
+            ];
+            filteredQuotations.forEach(q => rows.push([
+                q.quotation_number || `QUO-${q.id}`,
+                q.quotation_date ? new Date(q.quotation_date).toLocaleDateString('en-IN') : 'N/A',
+                q.client_name || 'N/A',
+                q.tax_rule === 'cgst_sgst' ? 'CGST + SGST' : 'IGST',
+                (q.subtotal || 0).toFixed(2),
+                (q.total_tax || 0).toFixed(2),
+                (q.grand_total || 0).toFixed(2),
+                (q.status || 'draft').toUpperCase()
+            ]));
+            
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Quotations");
+            XLSX.writeFile(wb, `quotation_history_${new Date().toISOString().slice(0,10)}.xlsx`);
+            showNotification("Export completed successfully.", 'success');
+        } catch (error) {
+            console.error('Error exporting to Excel:', error);
+            showNotification(`Error: Failed to export. ${error.message}`, 'error');
+        }
     }
     
     function viewSelected() {
-      const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
-      if (!selectedIds.length) {
-        showNotification("No quotations selected to view.", 'warning');
-        return;
-      }
-      
-      // Open first selected in current window, others in new tabs
-      window.location.href = `quotation.html?id=${selectedIds[0]}`;
-      selectedIds.slice(1).forEach(id => {
-        window.open(`quotation.html?id=${id}`, '_blank');
-      });
-    }
-
-    function printSelected() {
-      const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
-      if (!selectedIds.length) {
-        showNotification("No quotations selected to print.", 'warning');
-        return;
-      }
-      
-      selectedIds.forEach(id => {
-        window.open(`quotation.html?id=${id}&print=true`, '_blank');
-      });
+        const selectedIds = Array.from(document.querySelectorAll('.select-quote:checked')).map(cb => cb.value);
+        if (!selectedIds.length) {
+            return showNotification("No quotations selected to view.", 'warning');
+        }
+        window.location.href = `quotation.html?id=${selectedIds[0]}`;
+        selectedIds.slice(1).forEach(id => {
+            window.open(`quotation.html?id=${id}`, '_blank');
+        });
     }
 
     // --- FILTERING LOGIC ---
     function applyFilters() {
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const from = document.getElementById('fromDate').value;
-      const to = document.getElementById('toDate').value;
-      const tax = document.getElementById('taxFilter').value;
-      const status = document.getElementById('statusFilter').value;
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const from = document.getElementById('fromDate').value;
+        const to = document.getElementById('toDate').value;
+        const status = document.getElementById('statusFilter').value;
 
-      filteredQuotations = allQuotations.filter(q => {
-        const date = q.quotation_date;
-        const dateValid = (!from || date >= from) && (!to || date <= to);
-        const textMatch = (q.client_name || '').toLowerCase().includes(search) || 
-                         (q.reference_number || '').toLowerCase().includes(search) ||
-                         `QUO-${q.id}`.includes(search);
-        const taxMatch = !tax || q.tax_rule === tax;
-        const statusMatch = !status || (q.status || 'draft') === status;
-        return dateValid && textMatch && taxMatch && statusMatch;
-      });
-      
-      renderTable(filteredQuotations);
-      
-      if (filteredQuotations.length === 0) {
-        showNotification("No quotations match your filter criteria.", 'warning');
-      }
+        filteredQuotations = allQuotations.filter(q => {
+            const date = q.quotation_date;
+            const dateValid = (!from || date >= from) && (!to || date <= to);
+            const textMatch = (q.client_name || '').toLowerCase().includes(search) || 
+                              (q.reference_number || '').toLowerCase().includes(search) ||
+                              (q.quotation_number || `quo-${q.id}`).toLowerCase().includes(search);
+            const statusMatch = !status || (q.status || 'draft').toLowerCase() === status;
+            return dateValid && textMatch && statusMatch;
+        });
+        
+        renderTable(filteredQuotations);
+        if (filteredQuotations.length === 0) {
+            showNotification("No quotations match your filter criteria.", 'warning');
+        }
     }
     
     function resetFilters() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('fromDate').value = '';
-      document.getElementById('toDate').value = '';
-      document.getElementById('taxFilter').value = '';
-      document.getElementById('statusFilter').value = '';
-      filteredQuotations = [...allQuotations];
-      renderTable(filteredQuotations);
+        document.getElementById('searchInput').value = '';
+        document.getElementById('fromDate').value = '';
+        document.getElementById('toDate').value = '';
+        document.getElementById('statusFilter').value = '';
+        filteredQuotations = [...allQuotations];
+        renderTable(filteredQuotations);
     }
 
     // --- UTILITY FUNCTIONS ---
     function showLoading(show) {
-      loadingOverlay.style.display = show ? 'flex' : 'none';
+        if(loadingOverlay) loadingOverlay.style.display = show ? 'flex' : 'none';
     }
 
     function showNotification(message, type = 'success') {
-      const div = document.createElement('div');
-      div.className = `notification ${type === 'error' ? 'error' : type === 'warning' ? 'warning' : ''}`;
-      div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'exclamation'}-circle"></i> ${message}`;
-      document.body.appendChild(div);
-      setTimeout(() => {
-        div.style.opacity = '0';
-        setTimeout(() => div.remove(), 300);
-      }, 3000);
+        const div = document.createElement('div');
+        div.className = `notification ${type}`;
+        div.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle"></i> ${message}`;
+        document.body.appendChild(div);
+        setTimeout(() => {
+            div.style.opacity = '0';
+            setTimeout(() => div.remove(), 300);
+        }, 3000);
     }
 
     // --- EVENT LISTENERS ---
-    document.addEventListener('DOMContentLoaded', async () => {
-      if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:red">Configuration error: Supabase credentials not set.</td></tr>';
-        return;
-      }
-      
-      // Set today as default "To Date"
-      document.getElementById('toDate').value = new Date().toISOString().split('T')[0];
-      
-      // Load initial data
-      loadQuotations();
-      
-      // Attach event listeners
-      document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
-      document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
-      document.getElementById('exportBtn').addEventListener('click', exportToExcel);
-      document.getElementById('viewSelectedBtn').addEventListener('click', viewSelected);
-      document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
-      document.getElementById('printSelectedBtn').addEventListener('click', printSelected);
-      
-      toggleAllCheckbox.addEventListener('click', (e) => {
-        document.querySelectorAll('.select-quote').forEach(cb => cb.checked = e.target.checked);
-      });
-      
-      // Enable search on Enter key
-      document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') applyFilters();
-      });
-    });
+    function setupEventListeners() {
+        document.getElementById('applyFilterBtn').addEventListener('click', applyFilters);
+        document.getElementById('resetFilterBtn').addEventListener('click', resetFilters);
+        document.getElementById('exportBtn').addEventListener('click', exportToExcel);
+        document.getElementById('viewSelectedBtn').addEventListener('click', viewSelected);
+        document.getElementById('deleteSelectedBtn').addEventListener('click', deleteSelected);
+        
+        toggleAllCheckbox.addEventListener('click', (e) => {
+            document.querySelectorAll('.select-quote').forEach(cb => cb.checked = e.target.checked);
+        });
+        
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') applyFilters();
+        });
+    }
     
     // Make functions globally accessible for onclick attributes
     window.deleteQuotation = deleteQuotation;
+    window.viewQuotation = viewQuotation;
+    window.convertToInvoice = convertToInvoice;
 
 </script>
 </body>
