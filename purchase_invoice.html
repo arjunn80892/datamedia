@@ -148,7 +148,10 @@
         <input type="hidden" id="taxType" value="cgst_sgst">
       </div>
     </div>
-
+    <h3>
+    Invoice Number:
+    <span id="invoiceNumberDisplay" style="color: #007bff;"></span>
+  </h3>
 
     <div class="product-section">
       <h3 style="margin-bottom: 20px;">Products/Services</h3>
@@ -261,9 +264,6 @@
 
     const urlParams = new URLSearchParams(window.location.search);
     const invoiceId = urlParams.get('id') || urlParams.get('edit');
-
-    // --- This alert is for debugging ---
-    alert("The Invoice ID from the URL is: " + invoiceId);
 
     if (invoiceId && invoiceId !== 'undefined' && invoiceId !== 'null') {
         isEditingInvoice = true;
