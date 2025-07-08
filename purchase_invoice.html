@@ -283,7 +283,7 @@
     const { data: invoiceData, error: invoiceError } = await supabaseClient
       .from('purchase_invoices')
       .select('*')
-      .eq('id', invoiceId)  // ✅ FIXED HERE
+      .eq('invoice_number_id', invoiceId) // ✅ FIXED HERE
       .single();
 
     if (invoiceError) throw invoiceError;
@@ -575,7 +575,7 @@
         let result, error;
 
         if (isEditingInvoice) {
-            const existingId = lastSavedInvoiceData.id; // ✅ Use 'id' instead of 'invoice_number_id'
+           const existingId = lastSavedInvoiceData.invoice_number_id;
             ({ data: result, error } = await supabaseClient
                 .from('purchase_invoices')
                 .update(invoiceData)
