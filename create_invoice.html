@@ -154,33 +154,35 @@
 
 
     <div class="product-section">
-      <h3 style="margin-bottom: 20px;">Products/Services</h3>
-      <div class="search-container">
+    <h3 style="margin-bottom: 20px;">Products/Services</h3>
+    <div class="search-container">
         <label for="productSearchInput">Search Product</label>
         <input type="text" id="productSearchInput" class="form-control" placeholder="Start typing product name or code..." disabled>
         <div id="productSearchResults" class="search-results-container"></div>
-      </div>
-      <hr style="margin: 20px 0; border:none; border-top: 1px solid #ddd;">
-      <div class="product-row product-row-header">
+    </div>
+    <hr style="margin: 20px 0; border:none; border-top: 1px solid #ddd;">
+
+    <div class="product-row product-row-header">
         <div>Category</div>
         <div>Brand</div>
+        <div>HSN Code</div>
         <div>Qty</div>
         <div>Price</div>
-        <div>Discount %</div>
         <div>Description</div>
         <div>Action</div>
-      </div>
-      <div class="product-row">
-        <input type="text" id="category" class="form-control" placeholder="Category">
-        <input type="text" id="brand" class="form-control" placeholder="Brand">
-        <input type="number" id="quantity" class="form-control" min="1" value="1">
-        <input type="number" id="price" class="form-control" step="0.01" placeholder="0.00">
-        <input type="number" id="discount" class="form-control" min="0" max="100" value="0">
-        <textarea id="productDescription" class="form-control" rows="1" placeholder="Description"></textarea>
-        <button class="btn btn-primary" onclick="addProduct()">Add</button>
-      </div>
     </div>
 
+    <div class="product-row" style="grid-template-columns: 2fr 1fr 1fr 1fr 2fr 2fr 1fr;">
+        <input type="text" id="category" class="form-control" placeholder="Category">
+        <input type="text" id="brand" class="form-control" placeholder="Brand">
+        <input type="text" id="hsnCode" class="form-control" placeholder="HSN Code" readonly>
+        <input type="number" id="quantity" class="form-control" min="1" value="1">
+        <input type="number" id="price" class="form-control" step="0.01" placeholder="0.00">
+        <textarea id="productDescription" class="form-control" rows="1" placeholder="Description"></textarea>
+        <button class="btn btn-primary" onclick="addProduct()">Add</button>
+        <input type="hidden" id="discount" value="0">
+    </div>
+</div>
     <table id="savedProductsTable" class="hidden">
       <thead>
         <tr>
@@ -485,53 +487,66 @@
     }
 
     function editProduct(index) {
-        const productToEdit = savedProducts[index];
-        
-        document.getElementById('productSearchInput').value = productToEdit.productName;
-        document.getElementById('category').value = productToEdit.category;
-        document.getElementById('brand').value = productToEdit.brand;
-        document.getElementById("quantity").value = productToEdit.quantity;
-        document.getElementById("price").value = productToEdit.price;
-        document.getElementById("discount").value = productToEdit.discountPercent;
-        document.getElementById("productDescription").value = productToEdit.description;
-        
-        selectedProductForAdding = { name: productToEdit.productName };
-        
-        deleteProduct(index);
-    }
+    const productToEdit = savedProducts[index];
+
+    document.getElementById('productSearchInput').value = productToEdit.productName;
+    document.getElementById('category').value = productToEdit.category;
+    document.getElementById('brand').value = productToEdit.brand;
+    // ✅ Add this line
+    document.getElementById('hsnCode').value = productToEdit.hsn || '';
+    document.getElementById("quantity").value = productToEdit.quantity;
+    document.getElementById("price").value = productToEdit.price;
+    document.getElementById("discount").value = productToEdit.discountPercent;
+    document.getElementById("productDescription").value = productToEdit.description;
+
+    selectedProductForAdding = { ...productToEdit }; // Store full object
+
+    deleteProduct(index);
+}
     
     function renderProductsTable() {
-      const table = document.getElementById("savedProductsTable");
-      const tbody = document.getElementById("savedProductsBody");
-      tbody.innerHTML = '';
-      
-      if (savedProducts.length === 0) {
+    const table = document.getElementById("savedProductsTable");
+    const tbody = document.getElementById("savedProductsBody");
+    tbody.innerHTML = '';
+    
+    if (savedProducts.length === 0) {
         table.classList.add("hidden");
         return;
-      }
-      table.classList.remove("hidden");
+    }
+    table.classList.remove("hidden");
 
-      savedProducts.forEach((product, index) => {
+    // ✅ Update the table header
+    table.querySelector("thead tr").innerHTML = `
+        <th>Product Name</th>
+        <th>HSN</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Total</th>
+        <th>Actions</th>
+    `;
+
+    savedProducts.forEach((product, index) => {
         const tr = document.createElement("tr");
         let discountedPrice = product.price * (1 - product.discountPercent / 100);
         let total = discountedPrice * product.quantity;
         
+        // ✅ Update the table row data
         tr.innerHTML = `
-          <td>${product.productName}${product.description ? `<br><small style="color:var(--gray)">${product.description}</small>` : ''}</td>
-          <td>${product.quantity}</td>
-          <td>${product.price.toFixed(2)}</td>
-          <td>${product.discountPercent}%</td>
-          <td>${total.toFixed(2)}</td>
-          <td>
-            <div class="btn-group">
-                <button class="btn btn-warning btn-sm" onclick="editProduct(${index})">Edit</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteProduct(${index})">Delete</button>
-            </div>
-          </td>
+            <td>${product.productName}${product.description ? `<br><small style="color:var(--gray)">${product.description}</small>` : ''}</td>
+            <td>${product.hsn || '-'}</td>
+            <td>${product.quantity}</td>
+            <td>${product.price.toFixed(2)}</td>
+            <td>${total.toFixed(2)}</td>
+            <td>
+                <div class="btn-group">
+                    <button class="btn btn-warning btn-sm" onclick="editProduct(${index})">Edit</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteProduct(${index})">Delete</button>
+                </div>
+            </td>
         `;
         tbody.appendChild(tr);
-      });
-    }
+    });
+}
 
     function updateTotals() {
       let subtotal = savedProducts.reduce((sum, p) => {
@@ -568,15 +583,17 @@
     }
     
     function clearProductInputs() {
-      document.getElementById("productSearchInput").value = "";
-      document.getElementById("category").value = "";
-      document.getElementById("brand").value = "";
-      document.getElementById("productDescription").value = "";
-      document.getElementById("quantity").value = 1;
-      document.getElementById("price").value = "";
-      document.getElementById("discount").value = 0;
-      selectedProductForAdding = null;
-    }
+    document.getElementById("productSearchInput").value = "";
+    document.getElementById("category").value = "";
+    document.getElementById("brand").value = "";
+    // ✅ Add this line
+    document.getElementById("hsnCode").value = "";
+    document.getElementById("productDescription").value = "";
+    document.getElementById("quantity").value = 1;
+    document.getElementById("price").value = "";
+    document.getElementById("discount").value = 0;
+    selectedProductForAdding = null;
+}
 
    async function saveInvoiceData() {
     const saveButton = document.getElementById('saveButton');
@@ -701,7 +718,7 @@
         }
       } catch (e) { console.error("Could not add logo.", e); }
       
-       const companyName = "Datamedia";
+    const companyName = "Datamedia";
     const address = "Souparnika Building, Varanadu, Cherthala, Kerala 32";
     const pincode = "688524";
     const gstin = "32AJGPB3172R1Z4";
@@ -710,7 +727,6 @@
     const clientName = data.client_name || "-";
     const billingAddress = data.billing_address || "-";
     const invoiceDate = new Date(data.invoice_date).toLocaleDateString('en-IN');
-    // ✅ FIXED: Use the correct invoice number from the database.
     const invoiceNumber = data.invoice_number || `INV-${data.id}`;
     const referenceNumber = data.reference_number || "-";
     
@@ -744,7 +760,6 @@
 
     doc.autoTable({
         startY: tableStartY,
-        // ✅ UPDATED: Changed "Disc" header to "HSN".
         head: [["#", "Product", "Qty", "Price", "HSN", "CGST", "SGST", "IGST", "Total"]],
         body: data.products.map((product, i) => {
             let discountedPrice = product.price * (1 - product.discountPercent / 100);
@@ -761,7 +776,6 @@
                 `${product.productName}${product.description ? `\nDesc: ${product.description}` : ''}`,
                 product.quantity,
                 product.price.toFixed(2),
-                // ✅ UPDATED: Replaced discount with the HSN code.
                 product.hsn || '-', 
                 p_cgst.toFixed(2),
                 p_sgst.toFixed(2),
@@ -772,8 +786,6 @@
         styles: { fontSize: 9, overflow: 'linebreak', cellPadding: 2, valign: 'top' },
         columnStyles: { 1: { cellWidth: 50 } }
     });
-
-    // ... The rest of your function (totals, footer, etc.) remains the same ...
 
     let finalY = doc.lastAutoTable.finalY;
     const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
@@ -824,8 +836,7 @@
     doc.setFontSize(8).text("This is a computer generated invoice", 105, footerY + 59, { align: "center" });
     
     doc.save(`${invoiceNumber}.pdf`);
-}
-    function toWords(num) {
+}  function toWords(num) {
     if (isNaN(num)) return "Invalid Amount";
 
     const rupees = Math.floor(num);
