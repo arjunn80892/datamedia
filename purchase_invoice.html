@@ -283,7 +283,7 @@
         const { data: invoiceData, error: invoiceError } = await supabaseClient
             .from('purchase_invoices')
             .select('*')
-            .eq('id', invoiceId) // ✅ FIX: Changed 'invoice_number_id' to 'id'
+            .eq('id', invoiceId)
             .single();
 
         if (invoiceError) throw invoiceError;
@@ -295,8 +295,11 @@
         // Populate all fields from invoiceData
         document.getElementById('vendorName').value = invoiceData.vendor_name || '';
         document.getElementById('vendorAddress').value = invoiceData.vendor_address || '';
-        // Set the search input as well for user clarity
         document.getElementById('vendorSearchInput').value = invoiceData.vendor_name || '';
+        
+        // ✅ ADD THIS LINE TO LOAD THE EXISTING GSTIN
+        document.getElementById('vendorGstin').value = invoiceData.vendor_gstin || '';
+
         document.getElementById('invoiceDate').value = invoiceData.invoice_date?.split('T')[0] || '';
         document.getElementById('dueDate').value = invoiceData.due_date?.split('T')[0] || '';
         document.getElementById('taxType').value = invoiceData.tax_type || 'cgst_sgst';
@@ -304,12 +307,10 @@
         document.getElementById('terms').value = invoiceData.terms || '';
         document.getElementById('referenceNumber').value = invoiceData.reference_number || '';
         
-        // Display the invoice number if it exists
         if (invoiceData.invoice_number) {
             document.getElementById('invoiceNumberDisplay').textContent = invoiceData.invoice_number;
         }
 
-        // Activate tax buttons
         document.querySelectorAll('.tax-toggle-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.value === invoiceData.tax_type);
         });
@@ -317,7 +318,7 @@
         savedProducts = invoiceData.products || [];
         renderProductsTable();
         updateTotals();
-        lastSavedInvoiceData = invoiceData; // Store the full correct data
+        lastSavedInvoiceData = invoiceData;
 
     } catch (error) {
         console.error('Error loading invoice:', error.message);
@@ -825,4 +826,3 @@
 </body>
 </html>
 
-  
