@@ -394,6 +394,7 @@
         document.getElementById('vendorName').value = vendor.name;
         document.getElementById('vendorAddress').value = vendor.address || '';
         document.getElementById('vendorSearchResults').style.display = 'none';
+        document.getElementById('vendorGstin').value = vendor.gstin || '';
     }
 
     function selectProduct(product) {
@@ -578,6 +579,7 @@
         remarks: document.getElementById("remarks").value,
         terms: document.getElementById("terms").value,
         reference_number: document.getElementById("referenceNumber").value,
+        vendor_gstin: document.getElementById("vendorGstin").value,
         status: 'Draft',
     };
 
@@ -822,3 +824,4 @@
 </script>
 </body>
 </html>
+
