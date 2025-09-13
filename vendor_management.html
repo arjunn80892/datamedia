@@ -36,12 +36,16 @@
             background-color: #f5f7fb;
             color: #333;
             line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
+            flex: 1;
         }
 
         .header {
@@ -71,6 +75,30 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+
+        .auth-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
         }
 
         .btn {
@@ -286,6 +314,29 @@
             color: var(--light-gray);
         }
 
+        .login-container {
+            max-width: 400px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        .login-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: auto;
+            background: var(--dark);
+            color: white;
+        }
+
         @media (max-width: 768px) {
             .form-group {
                 min-width: 100%;
@@ -309,6 +360,11 @@
             .search-container {
                 flex-direction: column;
             }
+            
+            .auth-section {
+                width: 100%;
+                justify-content: space-between;
+            }
         }
 
         .badge {
@@ -330,98 +386,126 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1 class="app-title"><i class="fas fa-handshake"></i> Vendor Management System</h1>
-            <button class="btn btn-outline" id="backBtn">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
+    <div class="container" id="main-content">
+        <!-- Login form (initially shown) -->
+        <div class="login-container" id="login-section">
+            <h2 class="login-title"><i class="fas fa-handshake"></i> Vendor Management</h2>
+            <div class="form-group">
+                <label for="login-email" class="form-label">Email</label>
+                <input type="email" id="login-email" class="form-control" placeholder="Enter your email" value="demo@example.com">
+            </div>
+            <div class="form-group">
+                <label for="login-password" class="form-label">Password</label>
+                <input type="password" id="login-password" class="form-control" placeholder="Enter your password" value="password">
+            </div>
+            <button class="btn btn-primary" id="login-btn" style="width: 100%; margin-top: 15px;">
+                <i class="fas fa-sign-in-alt"></i> Login
             </button>
-        </div>
-        
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title" id="formTitle">Add New Vendor</h2>
-                <span class="badge badge-success" id="formStatus">Add Mode</span>
-            </div>
-            <div class="card-body">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="vendorName" class="form-label">Vendor Name *</label>
-                        <input type="text" id="vendorName" class="form-control" required placeholder="Enter vendor name">
-                    </div>
-                    <div class="form-group">
-                        <label for="vendorGST" class="form-label">GSTIN</label>
-                        <input type="text" id="vendorGST" class="form-control" placeholder="Enter GSTIN">
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="vendorPhone" class="form-label">Phone Number</label>
-                        <input type="tel" id="vendorPhone" class="form-control" placeholder="Enter phone number">
-                    </div>
-                    <div class="form-group">
-                        <label for="vendorEmail" class="form-label">Email</label>
-                        <input type="email" id="vendorEmail" class="form-control" placeholder="Enter email address">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="vendorAddress" class="form-label">Address</label>
-                    <textarea id="vendorAddress" class="form-control" placeholder="Enter full address"></textarea>
-                </div>
-                <div class="action-buttons">
-                    <button class="btn btn-primary" id="addBtn">
-                        <i class="fas fa-plus"></i> Add Vendor
-                    </button>
-                    <button class="btn btn-success" id="saveBtn" style="display:none">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                    <button class="btn btn-outline" id="clearBtn">
-                        <i class="fas fa-eraser"></i> Clear Form
-                    </button>
-                </div>
-            </div>
+            <p style="text-align: center; margin-top: 20px; color: var(--gray);">
+                Use any email and password to demo the system
+            </p>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Vendor Directory</h2>
-                <div class="action-buttons">
-                    <button class="btn btn-success" id="exportBtn">
-                        <i class="fas fa-file-export"></i> Export to Excel
+        <!-- Main app (initially hidden) -->
+        <div id="app-section" style="display: none;">
+            <div class="header">
+                <h1 class="app-title"><i class="fas fa-handshake"></i> Vendor Management System</h1>
+                <div class="auth-section">
+                    <div class="user-info">
+                        <div class="user-avatar" id="user-avatar">U</div>
+                        <span id="user-email">user@example.com</span>
+                    </div>
+                    <button class="btn btn-outline" id="logout-btn">
+                        <i class="fas fa-sign-out-alt"></i> Logout
                     </button>
                 </div>
             </div>
-            <div class="card-body">
-                <div class="search-container">
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search vendors by name, GSTIN, phone or email...">
-                    <button class="btn btn-outline" id="searchBtn">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title" id="formTitle">Add New Vendor</h2>
+                    <span class="badge badge-success" id="formStatus">Add Mode</span>
                 </div>
-                
-                <div class="table-responsive">
-                    <table class="data-table" id="vendorTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Name</th>
-                                <th>GSTIN</th>
-                                <th>Phone</th>
-                                <th>Email</th>
-                                <th>Address</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td colspan="7" class="empty-state">
-                                    <i class="fas fa-inbox"></i>
-                                    <h3>No vendors found</h3>
-                                    <p>Add your first vendor using the form above</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                <div class="card-body">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vendorName" class="form-label">Vendor Name *</label>
+                            <input type="text" id="vendorName" class="form-control" required placeholder="Enter vendor name">
+                        </div>
+                        <div class="form-group">
+                            <label for="vendorGST" class="form-label">GSTIN</label>
+                            <input type="text" id="vendorGST" class="form-control" placeholder="Enter GSTIN">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vendorPhone" class="form-label">Phone Number</label>
+                            <input type="tel" id="vendorPhone" class="form-control" placeholder="Enter phone number">
+                        </div>
+                        <div class="form-group">
+                            <label for="vendorEmail" class="form-label">Email</label>
+                            <input type="email" id="vendorEmail" class="form-control" placeholder="Enter email address">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vendorAddress" class="form-label">Address</label>
+                        <textarea id="vendorAddress" class="form-control" placeholder="Enter full address"></textarea>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="addBtn">
+                            <i class="fas fa-plus"></i> Add Vendor
+                        </button>
+                        <button class="btn btn-success" id="saveBtn" style="display:none">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button class="btn btn-outline" id="clearBtn">
+                            <i class="fas fa-eraser"></i> Clear Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Vendor Directory</h2>
+                    <div class="action-buttons">
+                        <button class="btn btn-success" id="exportBtn">
+                            <i class="fas fa-file-export"></i> Export to Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="search-container">
+                        <input type="text" id="searchInput" class="search-input" placeholder="Search vendors by name, GSTIN, phone or email...">
+                        <button class="btn btn-outline" id="searchBtn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="data-table" id="vendorTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>GSTIN</th>
+                                    <th>Phone</th>
+                                    <th>Email</th>
+                                    <th>Address</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" class="empty-state">
+                                        <i class="fas fa-inbox"></i>
+                                        <h3>No vendors found</h3>
+                                        <p>Add your first vendor using the form above</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -432,25 +516,37 @@
         <span id="notification-text"></span>
     </div>
 
+    <footer class="footer">
+        <p>Vendor Management System &copy; 2023</p>
+    </footer>
+
     <script>
         // Initialize Supabase client
         const supabaseUrl = 'https://riisjtqzsjebzjanwvgt.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhbmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         // Global variables
         let vendors = [];
         let currentlyEditingId = null;
+        let currentUser = null;
         const vendorTableBody = document.querySelector("#vendorTable tbody");
 
         // DOM Elements
+        const loginSection = document.getElementById('login-section');
+        const appSection = document.getElementById('app-section');
+        const loginEmail = document.getElementById('login-email');
+        const loginPassword = document.getElementById('login-password');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userAvatar = document.getElementById('user-avatar');
+        const userEmail = document.getElementById('user-email');
         const addBtn = document.getElementById('addBtn');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
         const exportBtn = document.getElementById('exportBtn');
         const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
-        const backBtn = document.getElementById('backBtn');
         const formStatus = document.getElementById('formStatus');
 
         // Show notification
@@ -471,12 +567,87 @@
             }, 3000);
         }
 
+        // Check if user is logged in
+        async function checkAuth() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                currentUser = user;
+                userEmail.textContent = user.email;
+                userAvatar.textContent = user.email.charAt(0).toUpperCase();
+                loginSection.style.display = 'none';
+                appSection.style.display = 'block';
+                await loadVendors();
+                return true;
+            }
+            return false;
+        }
+
+        // Login function
+        async function login(email, password) {
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) {
+                    // If login fails, try to sign up instead
+                    const { data, error } = await supabase.auth.signUp({
+                        email: email,
+                        password: password
+                    });
+                    
+                    if (error) throw error;
+                    
+                    showNotification('Account created successfully! Please check your email for confirmation.', 'success');
+                }
+                
+                // Set user data
+                currentUser = data.user;
+                userEmail.textContent = data.user.email;
+                userAvatar.textContent = data.user.email.charAt(0).toUpperCase();
+                
+                // Show app section, hide login
+                loginSection.style.display = 'none';
+                appSection.style.display = 'block';
+                
+                // Load vendors
+                await loadVendors();
+                
+                showNotification('Login successful!', 'success');
+                
+            } catch (error) {
+                console.error('Login error:', error);
+                showNotification('Login failed: ' + error.message, 'error');
+            }
+        }
+
+        // Logout function
+        async function logout() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                currentUser = null;
+                
+                // Show login section, hide app
+                loginSection.style.display = 'block';
+                appSection.style.display = 'none';
+                
+                showNotification('Logged out successfully', 'success');
+                
+            } catch (error) {
+                console.error('Logout error:', error);
+                showNotification('Logout failed: ' + error.message, 'error');
+            }
+        }
+
         // Load vendors from Supabase
         async function loadVendors() {
             try {
                 vendorTableBody.innerHTML = '<tr><td colspan="7" class="empty-state"><i class="fas fa-spinner fa-spin"></i><h3>Loading vendors...</h3></td></tr>';
                 
-                // Fixed: Use 'id' for ordering instead of 'created_at'
+                // Use 'id' for ordering
                 const { data, error } = await supabase
                     .from('vendors')
                     .select('*')
@@ -726,28 +897,33 @@
         // Initialize page
         async function initializePage() {
             try {
-                // Check if user is authenticated
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) {
-                    showNotification('You must be logged in to access this page.', 'error');
-                    setTimeout(() => {
-                        window.location.href = 'index.html';
-                    }, 2000);
-                    return;
+                // Check if user is already logged in
+                const isAuthenticated = await checkAuth();
+                
+                if (!isAuthenticated) {
+                    loginSection.style.display = 'block';
+                    appSection.style.display = 'none';
                 }
                 
-                // Load vendors
-                await loadVendors();
-                
                 // Add event listeners
+                loginBtn.addEventListener('click', () => {
+                    login(loginEmail.value, loginPassword.value);
+                });
+                
+                logoutBtn.addEventListener('click', logout);
+                
                 addBtn.addEventListener('click', addVendor);
                 saveBtn.addEventListener('click', saveVendor);
                 clearBtn.addEventListener('click', resetForm);
                 searchInput.addEventListener('keyup', filterTable);
                 searchBtn.addEventListener('click', filterTable);
                 exportBtn.addEventListener('click', exportVendorsToExcel);
-                backBtn.addEventListener('click', () => {
-                    window.location.href = 'dashboard.html';
+                
+                // Allow pressing Enter to login
+                loginPassword.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        login(loginEmail.value, loginPassword.value);
+                    }
                 });
                 
             } catch (error) {
