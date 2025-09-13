@@ -697,14 +697,14 @@
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    editVendor(parseInt(id));
+                    editVendor(id); // Pass the ID directly as string (no parsing to int)
                 });
             });
             
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    deleteVendor(parseInt(id));
+                    deleteVendor(id); // Pass the ID directly as string (no parsing to int)
                 });
             });
         }
@@ -760,6 +760,11 @@
 
         // Delete vendor
         async function deleteVendor(id) {
+            if (!id) {
+                showNotification('Error: Invalid vendor ID', 'error');
+                return;
+            }
+            
             if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) {
                 return;
             }
@@ -786,7 +791,10 @@
         // Edit vendor - populate form
         function editVendor(id) {
             const vendor = vendors.find(v => v.id === id);
-            if (!vendor) return;
+            if (!vendor) {
+                showNotification('Error: Vendor not found', 'error');
+                return;
+            }
             
             document.getElementById('vendorName').value = vendor.name || '';
             document.getElementById('vendorGST').value = vendor.gstin || '';
