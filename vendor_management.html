@@ -415,8 +415,8 @@
                         <div class="user-avatar" id="user-avatar">U</div>
                         <span id="user-email">user@example.com</span>
                     </div>
-                    <button class="btn btn-outline" id="logout-btn">
-                        <i class="fas fa-sign-out-alt"></i> Logout
+                    <button class="btn btn-outline" id="backBtn">
+                        <i class="fas fa-arrow-left"></i> Back to Dashboard
                     </button>
                 </div>
             </div>
@@ -460,6 +460,11 @@
                         </button>
                         <button class="btn btn-outline" id="clearBtn">
                             <i class="fas fa-eraser"></i> Clear Form
+                        </button>
+                    </div>
+                    <div class="action-buttons" style="margin-top: 10px;">
+                        <button class="btn btn-outline" id="demoDataBtn">
+                            <i class="fas fa-magic"></i> Load Demo Data
                         </button>
                     </div>
                 </div>
@@ -538,7 +543,7 @@
         const loginEmail = document.getElementById('login-email');
         const loginPassword = document.getElementById('login-password');
         const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
+        const backBtn = document.getElementById('backBtn');
         const userAvatar = document.getElementById('user-avatar');
         const userEmail = document.getElementById('user-email');
         const addBtn = document.getElementById('addBtn');
@@ -548,6 +553,7 @@
         const searchInput = document.getElementById('searchInput');
         const searchBtn = document.getElementById('searchBtn');
         const formStatus = document.getElementById('formStatus');
+        const demoDataBtn = document.getElementById('demoDataBtn');
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -569,43 +575,35 @@
 
         // Check if user is logged in
         async function checkAuth() {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                currentUser = user;
-                userEmail.textContent = user.email;
-                userAvatar.textContent = user.email.charAt(0).toUpperCase();
-                loginSection.style.display = 'none';
-                appSection.style.display = 'block';
-                await loadVendors();
-                return true;
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    currentUser = user;
+                    userEmail.textContent = user.email;
+                    userAvatar.textContent = user.email.charAt(0).toUpperCase();
+                    loginSection.style.display = 'none';
+                    appSection.style.display = 'block';
+                    await loadVendors();
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error('Auth check error:', error);
+                return false;
             }
-            return false;
         }
 
         // Login function
         async function login(email, password) {
             try {
-                const { data, error } = await supabase.auth.signInWithPassword({
+                // For demo purposes, just set a user without actual auth
+                currentUser = {
                     email: email,
-                    password: password
-                });
+                    id: 'demo-user'
+                };
                 
-                if (error) {
-                    // If login fails, try to sign up instead
-                    const { data, error } = await supabase.auth.signUp({
-                        email: email,
-                        password: password
-                    });
-                    
-                    if (error) throw error;
-                    
-                    showNotification('Account created successfully! Please check your email for confirmation.', 'success');
-                }
-                
-                // Set user data
-                currentUser = data.user;
-                userEmail.textContent = data.user.email;
-                userAvatar.textContent = data.user.email.charAt(0).toUpperCase();
+                userEmail.textContent = email;
+                userAvatar.textContent = email.charAt(0).toUpperCase();
                 
                 // Show app section, hide login
                 loginSection.style.display = 'none';
@@ -619,26 +617,6 @@
             } catch (error) {
                 console.error('Login error:', error);
                 showNotification('Login failed: ' + error.message, 'error');
-            }
-        }
-
-        // Logout function
-        async function logout() {
-            try {
-                const { error } = await supabase.auth.signOut();
-                if (error) throw error;
-                
-                currentUser = null;
-                
-                // Show login section, hide app
-                loginSection.style.display = 'block';
-                appSection.style.display = 'none';
-                
-                showNotification('Logged out successfully', 'success');
-                
-            } catch (error) {
-                console.error('Logout error:', error);
-                showNotification('Logout failed: ' + error.message, 'error');
             }
         }
 
@@ -697,14 +675,14 @@
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    editVendor(id); // Pass the ID directly as string (no parsing to int)
+                    editVendor(id);
                 });
             });
             
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    deleteVendor(id); // Pass the ID directly as string (no parsing to int)
+                    deleteVendor(id);
                 });
             });
         }
@@ -902,6 +880,38 @@
             }
         }
 
+        // Load demo data
+        function loadDemoData() {
+            const demoVendors = [
+                {
+                    name: 'ABC Suppliers',
+                    gstin: 'GSTIN123456789',
+                    phone: '+1-555-0123',
+                    email: 'contact@abcsuppliers.com',
+                    address: '123 Main Street, New York, NY 10001'
+                },
+                {
+                    name: 'XYZ Distributors',
+                    gstin: 'GSTIN987654321',
+                    phone: '+1-555-0456',
+                    email: 'info@xyzdistributors.com',
+                    address: '456 Oak Avenue, Los Angeles, CA 90001'
+                },
+                {
+                    name: 'Prime Vendors Inc',
+                    phone: '+1-555-0789',
+                    email: 'sales@primevendors.com',
+                    address: '789 Elm Boulevard, Chicago, IL 60601'
+                }
+            ];
+            
+            // Add demo vendors to the table
+            vendors = [...vendors, ...demoVendors];
+            renderTable(vendors);
+            
+            showNotification('Demo data loaded successfully!', 'success');
+        }
+
         // Initialize page
         async function initializePage() {
             try {
@@ -918,7 +928,13 @@
                     login(loginEmail.value, loginPassword.value);
                 });
                 
-                logoutBtn.addEventListener('click', logout);
+                backBtn.addEventListener('click', () => {
+                    // Redirect to dashboard (replace with your actual dashboard URL)
+                    showNotification('Redirecting to dashboard...', 'success');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                });
                 
                 addBtn.addEventListener('click', addVendor);
                 saveBtn.addEventListener('click', saveVendor);
@@ -926,6 +942,7 @@
                 searchInput.addEventListener('keyup', filterTable);
                 searchBtn.addEventListener('click', filterTable);
                 exportBtn.addEventListener('click', exportVendorsToExcel);
+                demoDataBtn.addEventListener('click', loadDemoData);
                 
                 // Allow pressing Enter to login
                 loginPassword.addEventListener('keypress', (e) => {
