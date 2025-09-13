@@ -1,572 +1,768 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vendor Management</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <style>
-    :root {
-      --primary: #4361ee;
-      --secondary: #3f37c9;
-      --danger: #f72585;
-      --success: #4cc9f0;
-      --dark: #212529;
-      --light: #f8f9fa;
-      --gray: #6c757d;
-      --warning: #ffc107;
-    }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    
-    body {
-      background-color: #f5f7fb;
-      color: var(--dark);
-      line-height: 1.6;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-    
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-      gap: 1rem;
-    }
-    
-    .page-title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-    
-    .card {
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-      padding: 1.5rem;
-      margin-bottom: 2rem;
-    }
-    
-    .form-section {
-      margin-bottom: 2rem;
-      padding: 1.5rem;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    
-    .form-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--primary);
-    }
-    
-    .form-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    
-    .form-group {
-      flex: 1;
-      min-width: 200px;
-    }
-    
-    label {
-      font-size: 0.875rem;
-      font-weight: 500;
-      margin-bottom: 0.5rem;
-      color: var(--gray);
-      display: block;
-    }
-    
-    input, textarea {
-      width: 100%;
-      padding: 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      transition: all 0.2s;
-    }
-    
-    input:focus, textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-    }
-    
-    textarea {
-      min-height: 80px;
-      resize: vertical;
-    }
-    
-    .btn {
-      padding: 0.75rem 1.25rem;
-      border-radius: 6px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-    }
-    
-    .btn-primary {
-      background-color: var(--primary);
-      color: white;
-    }
-    
-    .btn-primary:hover {
-      background-color: var(--secondary);
-    }
-    
-    .btn-danger {
-      background-color: var(--danger);
-      color: white;
-    }
-    
-    .btn-success {
-      background-color: var(--success);
-      color: white;
-    }
-    
-    .btn-warning {
-      background-color: var(--warning);
-      color: var(--dark);
-    }
-    
-    .btn-outline {
-      background-color: transparent;
-      border: 1px solid var(--gray);
-      color: var(--gray);
-    }
-    
-    .btn-outline:hover {
-      background-color: #f1f1f1;
-    }
-    
-    .action-btns {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      margin: 1rem 0;
-    }
-    
-    .table-container {
-      overflow-x: auto;
-      border-radius: 8px;
-      border: 1px solid #e2e8f0;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    th, td {
-      padding: 1rem;
-      text-align: left;
-      border-bottom: 1px solid #e2e8f0;
-      white-space: nowrap;
-    }
-    
-    th {
-      background-color: #f8f9fa;
-      font-weight: 600;
-      color: var(--gray);
-      text-transform: uppercase;
-      font-size: 0.75rem;
-      letter-spacing: 0.5px;
-      position: sticky;
-      top: 0;
-    }
-    
-    tr:hover {
-      background-color: #f8f9fa;
-    }
-    
-    .no-data {
-      text-align: center;
-      padding: 2rem;
-      color: var(--gray);
-    }
-    
-    .action-btn {
-      padding: 0.5rem;
-      min-width: 80px;
-      margin: 0.25rem;
-    }
-    
-    #searchInput {
-      padding: 0.75rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      width: 100%;
-      margin-bottom: 1rem;
-    }
-    
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      padding: 15px 20px;
-      border-radius: 8px;
-      color: white;
-      font-weight: 500;
-      z-index: 1000;
-      opacity: 0;
-      transform: translateY(-20px);
-      transition: opacity 0.3s, transform 0.3s;
-    }
-    
-    .notification.success {
-      background-color: var(--success);
-    }
-    
-    .notification.error {
-      background-color: var(--danger);
-    }
-    
-    .notification.show {
-      opacity: 1;
-      transform: translateY(0);
-    }
-    
-    @media (max-width: 768px) {
-      .container {
-        padding: 0 0.5rem;
-      }
-      
-      .form-group {
-        min-width: 100%;
-      }
-      
-      .action-btns {
-        flex-direction: column;
-      }
-      
-      .btn {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 class="page-title">Vendor Management</h1>
-      <button class="btn btn-outline" id="backBtn">← Back to Dashboard</button>
-    </div>
-    
-    <div class="card">
-      <div class="form-section">
-        <h3 class="form-title" id="formTitle">Add Vendor</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="vendorName">Vendor Name</label>
-            <input type="text" id="vendorName" required />
-          </div>
-          <div class="form-group">
-            <label for="vendorGST">GSTIN</label>
-            <input type="text" id="vendorGST" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="vendorPhone">Phone Number</label>
-            <input type="tel" id="vendorPhone" />
-          </div>
-          <div class="form-group">
-            <label for="vendorEmail">Email</label>
-            <input type="email" id="vendorEmail" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label for="vendorAddress">Address</label>
-          <textarea id="vendorAddress"></textarea>
-        </div>
-        <div class="action-btns">
-          <button class="btn btn-primary" id="addBtn">Add Vendor</button>
-          <button class="btn btn-warning" id="saveBtn" style="display:none">Save Changes</button>
-          <button class="btn btn-outline" id="clearBtn">Clear Form</button>
-        </div>
-      </div>
-
-      <input type="text" id="searchInput" placeholder="Search vendors by name, phone or email..." />
-      <div class="action-btns">
-        <button class="btn btn-success" id="exportBtn">Export to Excel</button>
-      </div>
-      
-      <div class="table-container">
-        <table id="vendorTable">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>GSTIN</th>
-              <th>Phone</th>
-              <th>Email</th>
-              <th>Address</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <div id="notification" class="notification"></div>
-
-  <script>
-    // Initialize Supabase client
-    const supabase = window.supabase.createClient(
-      'https://riisjtqzsjebzjanwvgt.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY'
-    );
-
-    let vendors = [];
-    let currentlyEditingId = null;
-    const vendorTableBody = document.querySelector("#vendorTable tbody");
-
-    // Show notification
-    function showNotification(message, type = 'success') {
-      const notification = document.getElementById('notification');
-      notification.textContent = message;
-      notification.className = `notification ${type}`;
-      notification.classList.add('show');
-      
-      setTimeout(() => {
-        notification.classList.remove('show');
-      }, 3000);
-    }
-
-    // Load vendors from Supabase
-    async function loadVendors() {
-      vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Loading...</td></tr>`;
-      const { data, error } = await supabase.from('vendors').select('*').order('id', { ascending: false });
-      if (error) {
-        console.error('Error loading vendors:', error);
-        vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Error loading data.</td></tr>`;
-        showNotification('Error loading vendors', 'error');
-        return;
-      }
-      vendors = data;
-      renderTable(vendors);
-    }
-
-    // Render vendors in table
-    function renderTable(data) {
-      if (!data.length) {
-        vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">No vendors found.</td></tr>`;
-        return;
-      }
-      vendorTableBody.innerHTML = data.map((v, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td>${v.name}</td>
-          <td>${v.gstin || '-'}</td>
-          <td>${v.phone || '-'}</td>
-          <td>${v.email || '-'}</td>
-          <td>${v.address || '-'}</td>
-          <td>
-            <button class="btn btn-warning btn-sm action-btn" onclick="editVendor(${v.id})">Edit</button>
-            <button class="btn btn-danger btn-sm action-btn" onclick="deleteVendor(${v.id})">Delete</button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    // Add new vendor
-    async function addVendor() {
-      const vendorData = getFormValues();
-      if (!vendorData) return;
-      
-      const { error } = await supabase.from('vendors').insert([vendorData]);
-      if (error) {
-        showNotification('Error adding vendor: ' + error.message, 'error');
-        return;
-      }
-      
-      resetForm();
-      await loadVendors();
-      showNotification('Vendor added successfully!');
-    }
-
-    // Save changes to existing vendor
-    async function saveVendor() {
-      const vendorData = getFormValues();
-      if (!vendorData || !currentlyEditingId) return;
-      
-      const { error } = await supabase.from('vendors').update(vendorData).eq('id', currentlyEditingId);
-      if (error) {
-        showNotification('Error updating vendor: ' + error.message, 'error');
-        return;
-      }
-      
-      resetForm();
-      await loadVendors();
-      showNotification('Vendor updated successfully!');
-    }
-
-    // Delete vendor
-    async function deleteVendor(id) {
-      if (!confirm('Are you sure you want to delete this vendor?')) return;
-      
-      const { error } = await supabase.from('vendors').delete().eq('id', id);
-      if (error) {
-        showNotification('Error deleting vendor: ' + error.message, 'error');
-        return;
-      }
-      
-      await loadVendors();
-      showNotification('Vendor deleted successfully.');
-    }
-
-    // Edit vendor - populate form
-    function editVendor(id) {
-      const vendor = vendors.find(v => v.id === Number(id));
-      if (!vendor) return;
-      
-      document.getElementById('vendorName').value = vendor.name;
-      document.getElementById('vendorGST').value = vendor.gstin || '';
-      document.getElementById('vendorPhone').value = vendor.phone || '';
-      document.getElementById('vendorEmail').value = vendor.email || '';
-      document.getElementById('vendorAddress').value = vendor.address || '';
-      
-      currentlyEditingId = vendor.id;
-      toggleAddSave(false);
-      window.scrollTo(0, 0);
-    }
-
-    // Clear form and reset state
-    function resetForm() {
-      document.getElementById('vendorName').value = '';
-      document.getElementById('vendorGST').value = '';
-      document.getElementById('vendorPhone').value = '';
-      document.getElementById('vendorEmail').value = '';
-      document.getElementById('vendorAddress').value = '';
-      
-      currentlyEditingId = null;
-      toggleAddSave(true);
-    }
-
-    // Toggle between Add and Save button visibility
-    function toggleAddSave(isAddMode) {
-      document.getElementById('addBtn').style.display = isAddMode ? 'inline-flex' : 'none';
-      document.getElementById('saveBtn').style.display = isAddMode ? 'none' : 'inline-flex';
-      document.getElementById('formTitle').innerText = isAddMode ? 'Add Vendor' : `Editing Vendor #${currentlyEditingId}`;
-    }
-
-    // Get form data and validate
-    function getFormValues() {
-      const name = document.getElementById('vendorName').value.trim();
-      const gstin = document.getElementById('vendorGST').value.trim();
-      const phone = document.getElementById('vendorPhone').value.trim();
-      const email = document.getElementById('vendorEmail').value.trim();
-      const address = document.getElementById('vendorAddress').value.trim();
-
-      if (!name) {
-        showNotification('Vendor Name is a required field.', 'error');
-        return null;
-      }
-      
-      // Basic validation
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showNotification('Please enter a valid email address.', 'error');
-        return null;
-      }
-      
-      if (phone && !/^[0-9+\-\s()]{10,}$/.test(phone)) {
-        showNotification('Please enter a valid phone number.', 'error');
-        return null;
-      }
-      
-      return { name, gstin, phone, email, address };
-    }
-
-    // Filter table rows by search input
-    function filterTable() {
-      const query = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = vendors.filter(v =>
-        v.name.toLowerCase().includes(query) ||
-        (v.phone && v.phone.toLowerCase().includes(query)) ||
-        (v.email && v.email.toLowerCase().includes(query)) ||
-        (v.gstin && v.gstin.toLowerCase().includes(query))
-      );
-      renderTable(filtered);
-    }
-
-    // Export vendors to Excel
-    function exportVendorsToExcel() {
-      if (vendors.length === 0) {
-        showNotification('No vendors to export.', 'error');
-        return;
-      }
-      
-      const wsData = [['Name', 'GSTIN', 'Phone', 'Email', 'Address']];
-      vendors.forEach(v => {
-        wsData.push([v.name, v.gstin || '', v.phone || '', v.email || '', v.address || '']);
-      });
-      
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
-      XLSX.writeFile(wb, 'vendors_export.xlsx');
-      showNotification('Vendors exported successfully!');
-    }
-
-    // Initialize page
-    async function initializePage() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          showNotification('You must be logged in to access this page.', 'error');
-          setTimeout(() => {
-            window.location.href = 'index.html';
-          }, 2000);
-          return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --danger: #f72585;
+            --success: #4cc9f0;
+            --dark: #212529;
+            --light: #f8f9fa;
+            --gray: #6c757d;
+            --warning: #ffc107;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
         }
         
-        await loadVendors();
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
         
-        // Add event listeners
-        document.getElementById('addBtn').addEventListener('click', addVendor);
-        document.getElementById('saveBtn').addEventListener('click', saveVendor);
-        document.getElementById('clearBtn').addEventListener('click', resetForm);
-        document.getElementById('searchInput').addEventListener('keyup', filterTable);
-        document.getElementById('exportBtn').addEventListener('click', exportVendorsToExcel);
-        document.getElementById('backBtn').addEventListener('click', () => {
-          window.location.href = 'dashboard.html';
-        });
+        body {
+            background: linear-gradient(135deg, #f5f7fb 0%, #e3e8f0 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
         
-      } catch (error) {
-        console.error('Initialization error:', error);
-        showNotification('Error initializing page', 'error');
-      }
-    }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .page-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .page-title i {
+            font-size: 1.8rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 1.8rem;
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .form-section {
+            margin-bottom: 2rem;
+            padding: 1.8rem;
+            background: #f9fafc;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+        }
+        
+        .form-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+            margin-bottom: 1.2rem;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 0.6rem;
+            color: var(--gray);
+            display: block;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 0.85rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .btn {
+            padding: 0.85rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #e51278;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #3abfdf;
+            transform: translateY(-2px);
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+            color: var(--dark);
+        }
+        
+        .btn-warning:hover {
+            background-color: #e6ac00;
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--gray);
+            color: var(--gray);
+        }
+        
+        .btn-outline:hover {
+            background-color: #f1f1f1;
+            transform: translateY(-2px);
+        }
+        
+        .action-btns {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin: 1.2rem 0;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            margin-top: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--gray);
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+        }
+        
+        tr {
+            transition: background-color 0.2s;
+        }
+        
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 2.5rem;
+            color: var(--gray);
+            font-style: italic;
+        }
+        
+        .action-btn {
+            padding: 0.6rem 0.8rem;
+            min-width: 80px;
+            margin: 0.2rem;
+            font-size: 0.8rem;
+        }
+        
+        #searchInput {
+            padding: 0.85rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            width: 100%;
+            margin-bottom: 1.2rem;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 18px;
+            padding-right: 45px;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 1.2rem;
+            margin-bottom: 1.8rem;
+            flex-wrap: wrap;
+        }
+        
+        .stat-card {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0.5rem 0;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s, transform 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .notification.success {
+            background-color: var(--success);
+        }
+        
+        .notification.error {
+            background-color: var(--danger);
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 0;
+            }
+            
+            .form-group {
+                min-width: 100%;
+            }
+            
+            .action-btns {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .stats-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="page-title"><i class="fas fa-building"></i> Vendor Management</h1>
+            <button class="btn btn-outline" id="backBtn">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </button>
+        </div>
+        
+        <div class="stats-container">
+            <div class="stat-card">
+                <i class="fas fa-store stat-icon" style="font-size: 2rem; color: #4361ee;"></i>
+                <div class="stat-value" id="totalVendors">0</div>
+                <div class="stat-label">Total Vendors</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle stat-icon" style="font-size: 2rem; color: #4cc9f0;"></i>
+                <div class="stat-value" id="activeVendors">0</div>
+                <div class="stat-label">Active Vendors</div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-file-export stat-icon" style="font-size: 2rem; color: #f72585;"></i>
+                <div class="stat-value" id="exportsCount">0</div>
+                <div class="stat-label">Exports Today</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="form-section">
+                <h3 class="form-title"><i class="fas fa-plus-circle"></i> <span id="formTitle">Add New Vendor</span></h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vendorName"><i class="fas fa-signature"></i> Vendor Name *</label>
+                        <input type="text" id="vendorName" required placeholder="Enter vendor name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="vendorGST"><i class="fas fa-receipt"></i> GSTIN</label>
+                        <input type="text" id="vendorGST" placeholder="Enter GSTIN number" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="vendorPhone"><i class="fas fa-phone"></i> Phone Number</label>
+                        <input type="tel" id="vendorPhone" placeholder="Enter phone number" />
+                    </div>
+                    <div class="form-group">
+                        <label for="vendorEmail"><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="vendorEmail" placeholder="Enter email address" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="vendorAddress"><i class="fas fa-map-marker-alt"></i> Address</label>
+                    <textarea id="vendorAddress" placeholder="Enter full address"></textarea>
+                </div>
+                <div class="action-btns">
+                    <button class="btn btn-primary" id="addBtn">
+                        <i class="fas fa-plus"></i> Add Vendor
+                    </button>
+                    <button class="btn btn-warning" id="saveBtn" style="display:none">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                    <button class="btn btn-outline" id="clearBtn">
+                        <i class="fas fa-times"></i> Clear Form
+                    </button>
+                </div>
+            </div>
 
-    // Start the application
-    document.addEventListener('DOMContentLoaded', initializePage);
-  </script>
+            <input type="text" id="searchInput" placeholder="Search vendors by name, phone, email or GSTIN..." />
+            
+            <div class="action-btns">
+                <button class="btn btn-success" id="exportBtn">
+                    <i class="fas fa-file-excel"></i> Export to Excel
+                </button>
+                <button class="btn btn-outline" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+            </div>
+            
+            <div class="table-container">
+                <table id="vendorTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>GSTIN</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://riisjtqzsjebzjanwvgt.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpaXNqdHF6c2plYnpqYW53dmd0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0NTA4MTYsImV4cCI6MjA2NzAyNjgxNn0.x-Z3OMFnpM_FZkCU4WwzDpYC-Hu7IqppEMeJYppxoxY';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let vendors = [];
+        let currentlyEditingId = null;
+        let exportsToday = 0;
+        const vendorTableBody = document.querySelector("#vendorTable tbody");
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // Update stats
+        function updateStats() {
+            document.getElementById('totalVendors').textContent = vendors.length;
+            document.getElementById('activeVendors').textContent = vendors.filter(v => v.status === 'active').length;
+            document.getElementById('exportsCount').textContent = exportsToday;
+        }
+
+        // Load vendors from Supabase
+        async function loadVendors() {
+            vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Loading vendors...</td></tr>`;
+            try {
+                const { data, error } = await supabase
+                    .from('vendors')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    throw error;
+                }
+                
+                vendors = data || [];
+                renderTable(vendors);
+                updateStats();
+            } catch (error) {
+                console.error('Error loading vendors:', error);
+                vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">Error loading data. Please try again.</td></tr>`;
+                showNotification('Error loading vendors: ' + error.message, 'error');
+            }
+        }
+
+        // Render vendors in table
+        function renderTable(data) {
+            if (!data.length) {
+                vendorTableBody.innerHTML = `<tr><td colspan="7" class="no-data">No vendors found. Add your first vendor above.</td></tr>`;
+                return;
+            }
+            
+            vendorTableBody.innerHTML = data.map((vendor, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${vendor.name}</strong></td>
+                    <td>${vendor.gstin || '-'}</td>
+                    <td>${vendor.phone || '-'}</td>
+                    <td>${vendor.email || '-'}</td>
+                    <td>${vendor.address ? vendor.address.substring(0, 30) + (vendor.address.length > 30 ? '...' : '') : '-'}</td>
+                    <td>
+                        <button class="btn btn-warning action-btn" onclick="editVendor(${vendor.id})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="btn btn-danger action-btn" onclick="deleteVendor(${vendor.id})">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Add new vendor
+        async function addVendor() {
+            const vendorData = getFormValues();
+            if (!vendorData) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('vendors')
+                    .insert([{ ...vendorData, status: 'active' }]);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                resetForm();
+                await loadVendors();
+                showNotification('Vendor added successfully!');
+            } catch (error) {
+                console.error('Error adding vendor:', error);
+                showNotification('Error adding vendor: ' + error.message, 'error');
+            }
+        }
+
+        // Save changes to existing vendor
+        async function saveVendor() {
+            const vendorData = getFormValues();
+            if (!vendorData || !currentlyEditingId) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('vendors')
+                    .update(vendorData)
+                    .eq('id', currentlyEditingId);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                resetForm();
+                await loadVendors();
+                showNotification('Vendor updated successfully!');
+            } catch (error) {
+                console.error('Error updating vendor:', error);
+                showNotification('Error updating vendor: ' + error.message, 'error');
+            }
+        }
+
+        // Delete vendor
+        async function deleteVendor(id) {
+            if (!confirm('Are you sure you want to delete this vendor? This action cannot be undone.')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('vendors')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) {
+                    throw error;
+                }
+                
+                await loadVendors();
+                showNotification('Vendor deleted successfully.');
+            } catch (error) {
+                console.error('Error deleting vendor:', error);
+                showNotification('Error deleting vendor: ' + error.message, 'error');
+            }
+        }
+
+        // Edit vendor - populate form
+        function editVendor(id) {
+            const vendor = vendors.find(v => v.id === id);
+            if (!vendor) return;
+            
+            document.getElementById('vendorName').value = vendor.name || '';
+            document.getElementById('vendorGST').value = vendor.gstin || '';
+            document.getElementById('vendorPhone').value = vendor.phone || '';
+            document.getElementById('vendorEmail').value = vendor.email || '';
+            document.getElementById('vendorAddress').value = vendor.address || '';
+            
+            currentlyEditingId = vendor.id;
+            toggleAddSave(false);
+            document.getElementById('formTitle').textContent = `Edit Vendor: ${vendor.name}`;
+            window.scrollTo(0, 0);
+        }
+
+        // Clear form and reset state
+        function resetForm() {
+            document.getElementById('vendorName').value = '';
+            document.getElementById('vendorGST').value = '';
+            document.getElementById('vendorPhone').value = '';
+            document.getElementById('vendorEmail').value = '';
+            document.getElementById('vendorAddress').value = '';
+            
+            currentlyEditingId = null;
+            toggleAddSave(true);
+            document.getElementById('formTitle').textContent = 'Add New Vendor';
+        }
+
+        // Toggle between Add and Save button visibility
+        function toggleAddSave(isAddMode) {
+            document.getElementById('addBtn').style.display = isAddMode ? 'inline-flex' : 'none';
+            document.getElementById('saveBtn').style.display = isAddMode ? 'none' : 'inline-flex';
+        }
+
+        // Get form data and validate
+        function getFormValues() {
+            const name = document.getElementById('vendorName').value.trim();
+            const gstin = document.getElementById('vendorGST').value.trim();
+            const phone = document.getElementById('vendorPhone').value.trim();
+            const email = document.getElementById('vendorEmail').value.trim();
+            const address = document.getElementById('vendorAddress').value.trim();
+
+            if (!name) {
+                showNotification('Vendor Name is a required field.', 'error');
+                document.getElementById('vendorName').focus();
+                return null;
+            }
+            
+            // Basic validation
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showNotification('Please enter a valid email address.', 'error');
+                document.getElementById('vendorEmail').focus();
+                return null;
+            }
+            
+            if (phone && !/^[0-9+\-\s()]{10,}$/.test(phone)) {
+                showNotification('Please enter a valid phone number.', 'error');
+                document.getElementById('vendorPhone').focus();
+                return null;
+            }
+            
+            return { name, gstin, phone, email, address };
+        }
+
+        // Filter table rows by search input
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = vendors.filter(v =>
+                v.name.toLowerCase().includes(query) ||
+                (v.phone && v.phone.toLowerCase().includes(query)) ||
+                (v.email && v.email.toLowerCase().includes(query)) ||
+                (v.gstin && v.gstin.toLowerCase().includes(query)) ||
+                (v.address && v.address.toLowerCase().includes(query))
+            );
+            renderTable(filtered);
+        }
+
+        // Export vendors to Excel
+        function exportVendorsToExcel() {
+            if (vendors.length === 0) {
+                showNotification('No vendors to export.', 'error');
+                return;
+            }
+            
+            try {
+                const wsData = [
+                    ['Name', 'GSTIN', 'Phone', 'Email', 'Address', 'Status']
+                ];
+                
+                vendors.forEach(v => {
+                    wsData.push([
+                        v.name,
+                        v.gstin || '',
+                        v.phone || '',
+                        v.email || '',
+                        v.address || '',
+                        v.status || 'active'
+                    ]);
+                });
+                
+                const ws = XLSX.utils.aoa_to_sheet(wsData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Vendors');
+                XLSX.writeFile(wb, `vendors_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+                
+                exportsToday++;
+                updateStats();
+                showNotification('Vendors exported successfully!');
+            } catch (error) {
+                console.error('Error exporting to Excel:', error);
+                showNotification('Error exporting vendors: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize page
+        async function initializePage() {
+            try {
+                // Check if user is authenticated
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                    showNotification('Please log in to access vendor management.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
+                    return;
+                }
+                
+                // Load initial data
+                await loadVendors();
+                
+                // Add event listeners
+                document.getElementById('addBtn').addEventListener('click', addVendor);
+                document.getElementById('saveBtn').addEventListener('click', saveVendor);
+                document.getElementById('clearBtn').addEventListener('click', resetForm);
+                document.getElementById('searchInput').addEventListener('input', filterTable);
+                document.getElementById('exportBtn').addEventListener('click', exportVendorsToExcel);
+                document.getElementById('refreshBtn').addEventListener('click', loadVendors);
+                document.getElementById('backBtn').addEventListener('click', () => {
+                    window.location.href = 'dashboard.html';
+                });
+                
+                showNotification('Vendor management system loaded successfully!');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showNotification('Error initializing page: ' + error.message, 'error');
+            }
+        }
+
+        // Start the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
 </body>
 </html>
