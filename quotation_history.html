@@ -269,11 +269,6 @@ async function convertToInvoice(quotationId) {
             status: 'Draft'
         };
 
-        // 3. Generate a new invoice number using your database function
-        const { data: newInvoiceNumber, error: rpcError } = await supabaseClient.rpc('generate_yearly_invoice_number');
-        if (rpcError) throw rpcError;
-        
-        invoiceData.invoice_number = newInvoiceNumber;
 
         // 4. Insert the new record into the 'invoices' table
         const { data: newInvoice, error: insertError } = await supabaseClient
