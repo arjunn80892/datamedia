@@ -740,9 +740,8 @@
     const clientNameHeight = wrappedClientName.length * 5;
 
 
-    const wrappedAddress = doc.splitTextToSize("Address: " + billingAddress, 50);
-    const addressHeight = wrappedAddress.length * 5;
-    doc.text(wrappedAddress, 150, startY + 10);
+    doc.text("Address: " + billingAddress, 150, startY + 10);
+
     
     let gstinY = startY + 10 + addressHeight;
     doc.text(`GSTIN: ${data.client_gstin || '-'}`, 150, gstinY);
