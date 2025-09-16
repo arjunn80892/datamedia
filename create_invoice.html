@@ -738,9 +738,11 @@
     const wrappedClientName = doc.splitTextToSize(clientName, 50);
     doc.text(wrappedClientName, 150, startY + 5, { maxWidth: 50 });
     const clientNameHeight = wrappedClientName.length * 5;
-
-
-    doc.text("Address: " + billingAddress, 150, startY + 10);
+      
+    doc.text("Address:", 150, startY + 10);
+    const wrappedAddress = doc.splitTextToSize(billingAddress, 50);
+    doc.text(wrappedAddress, 150, startY + 15, { maxWidth: 50 });
+    const addressHeight = wrappedAddress.length * 5;
 
     
     let gstinY = startY + 10 + addressHeight;
