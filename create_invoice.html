@@ -735,7 +735,10 @@
     
     doc.setFontSize(12).setFont(undefined, 'bold').text("Bill To", 150, startY);
     doc.setFontSize(10).setFont(undefined, 'normal');
-    doc.text(clientName, 150, startY + 5);
+    const wrappedClientName = doc.splitTextToSize(clientName, 50);
+    doc.text(wrappedClientName, 150, startY + 5, { maxWidth: 50 });
+    const clientNameHeight = wrappedClientName.length * 5;
+
 
     const wrappedAddress = doc.splitTextToSize("Address: " + billingAddress, 50);
     const addressHeight = wrappedAddress.length * 5;
