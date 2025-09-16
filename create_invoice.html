@@ -653,13 +653,6 @@
         } else {
             // ✅ --- CREATE a new invoice using the yearly reset logic ---
 
-            // 1. Call the database function to get the new invoice number.
-            const { data: newInvoiceNumber, error: rpcError } = await supabaseClient.rpc('generate_yearly_invoice_number');
-            if (rpcError) throw rpcError;
-
-            // 2. Add the new number to our data object.
-            invoiceData.invoice_number = newInvoiceNumber;
-
             // 3. Insert the complete record in a single step.
             ({ data: result, error } = await supabaseClient
                 .from('invoices')
