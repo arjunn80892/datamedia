@@ -720,35 +720,46 @@
     
     doc.setFontSize(16).text("TAX INVOICE", 105, 15, { align: "center" });
     
-    let startY = 30;
-    doc.setFontSize(13).setFont(undefined, 'bold').text(companyName, 14, startY);
-    doc.setFontSize(10).setFont(undefined, 'normal');
-    doc.text(address, 14, startY + 5);
-    doc.text("Pincode: " + pincode, 14, startY + 10);
-    doc.text("GSTIN: " + gstin, 14, startY + 15);
-    doc.text("Phone: " + phone, 14, startY + 20);
-    doc.text(`Supplier Reference: ${referenceNumber}`, 14, startY + 25);
+   let startY = 30;
 
-    doc.setFontSize(10).setFont(undefined, 'bold');
-    doc.text(`Invoice No: ${invoiceNumber}`, 14, startY + 35);
-    doc.text("Date: " + invoiceDate, 14, startY + 40);
-    
-    doc.setFontSize(12).setFont(undefined, 'bold').text("Bill To", 150, startY);
-    doc.setFontSize(10).setFont(undefined, 'normal');
-    const wrappedClientName = doc.splitTextToSize(clientName, 50);
-    doc.text(wrappedClientName, 150, startY + 5, { maxWidth: 50 });
-    const clientNameHeight = wrappedClientName.length * 5;
-      
-    doc.text("Address:", 150, startY + 10);
-    const wrappedAddress = doc.splitTextToSize(billingAddress, 50);
-    doc.text(wrappedAddress, 150, startY + 15, { maxWidth: 50 });
-    const addressHeight = wrappedAddress.length * 5;
+// Company info
+doc.setFontSize(13).setFont(undefined, 'bold').text(companyName, 14, startY);
+doc.setFontSize(10).setFont(undefined, 'normal');
+doc.text(address, 14, startY + 5);
+doc.text("Pincode: " + pincode, 14, startY + 10);
+doc.text("GSTIN: " + gstin, 14, startY + 15);
+doc.text("Phone: " + phone, 14, startY + 20);
+doc.text(`Supplier Reference: ${referenceNumber}`, 14, startY + 25);
 
-    
-    let gstinY = startY + 10 + addressHeight;
-    doc.text(`GSTIN: ${data.client_gstin || '-'}`, 150, gstinY);
+// Invoice info
+doc.setFontSize(10).setFont(undefined, 'bold');
+doc.text(`Invoice No: ${invoiceNumber}`, 14, startY + 35);
+doc.text("Date: " + invoiceDate, 14, startY + 40);
 
-    let tableStartY = Math.max(startY + 45, gstinY + 10);
+// Bill To
+doc.setFontSize(12).setFont(undefined, 'bold').text("Bill To", 150, startY);
+doc.setFontSize(10).setFont(undefined, 'normal');
+
+// Wrap client name
+const wrappedClientName = doc.splitTextToSize(clientName, 50);
+doc.text(wrappedClientName, 150, startY + 5, { maxWidth: 50 });
+const clientNameHeight = wrappedClientName.length * 5;
+
+// Address starts after client name
+let addressStartY = startY + 5 + clientNameHeight + 5;
+doc.text("Address:", 150, addressStartY);
+
+// Wrap billing address
+const wrappedAddress = doc.splitTextToSize(billingAddress, 50);
+doc.text(wrappedAddress, 150, addressStartY + 5, { maxWidth: 50 });
+const addressHeight = wrappedAddress.length * 5;
+
+// GSTIN starts after address
+let gstinY = addressStartY + 5 + addressHeight + 5;
+doc.text(`GSTIN: ${data.client_gstin || '-'}`, 150, gstinY);
+
+// Table starts below either invoice block or Bill To block
+let tableStartY = Math.max(startY + 45, gstinY + 10);
 
     doc.autoTable({
         startY: tableStartY,
