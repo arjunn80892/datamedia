@@ -17,6 +17,7 @@
       --primary-color: #4361ee;
       --secondary-color: #3f37c9;
     }
+
     body {
       background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
       min-height: 100vh;
@@ -25,6 +26,7 @@
       justify-content: center;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
+
     .auth-container {
       max-width: 500px;
       width: 100%;
@@ -33,37 +35,43 @@
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
     }
+
     .logo {
+      color: var(--primary-color);
       font-size: 28px;
       font-weight: 700;
-      color: var(--primary-color);
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       margin-bottom: 10px;
     }
+
     .logo i {
       margin-right: 10px;
     }
+
     .btn-primary {
       background-color: var(--primary-color);
       border: none;
       height: 48px;
       border-radius: 8px;
     }
+
     .btn-primary:hover {
       background-color: var(--secondary-color);
     }
+
     .password-toggle {
       position: absolute;
       right: 15px;
       top: 50%;
       transform: translateY(-50%);
       cursor: pointer;
+      color: #6c757d;
     }
+
     .forgot-password {
       text-align: right;
-      margin-top: -10px;
       margin-bottom: 15px;
     }
   </style>
@@ -82,29 +90,32 @@
 
   <form id="loginForm">
     <div class="mb-3">
-      <label class="form-label">Email</label>
-      <input type="email" id="email" class="form-control" required />
+      <label class="form-label">Email Address</label>
+      <input type="email" class="form-control" id="email" required />
     </div>
 
     <div class="mb-3 position-relative">
       <label class="form-label">Password</label>
-      <input type="password" id="password" class="form-control" required />
+      <input type="password" class="form-control" id="password" required />
       <i class="bi bi-eye-slash password-toggle" id="togglePassword"></i>
     </div>
 
     <div class="forgot-password">
-      <a href="/forgot_password">Forgot Password?</a>
+      <a href="forgot_password.html">Forgot Password?</a>
     </div>
 
-    <button type="submit" class="btn btn-primary w-100">Sign In</button>
+    <button type="submit" class="btn btn-primary w-100">
+      Sign In
+    </button>
 
     <div class="text-center mt-3">
-      <p>Don't have an account? <a href="/register">Sign up</a></p>
+      <p>Don't have an account? <a href="register.html">Sign up</a></p>
     </div>
   </form>
 </div>
 
 <script>
+  // ✅ Correct Supabase initialization
   const { createClient } = window.supabase;
 
   const supabaseClient = createClient(
@@ -112,24 +123,26 @@
     'sb_publishable_SjCm3QuqcZAJoQ8fHM0ZDQ_AquQxnSN'
   );
 
-  // Toggle password
+  // Toggle password visibility
   document.getElementById('togglePassword').addEventListener('click', function () {
-    const pwd = document.getElementById('password');
+    const passwordInput = document.getElementById('password');
     this.classList.toggle('bi-eye');
     this.classList.toggle('bi-eye-slash');
-    pwd.type = pwd.type === 'password' ? 'text' : 'password';
+    passwordInput.type =
+      passwordInput.type === 'password' ? 'text' : 'password';
   });
 
   // Login handler
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = email.value.trim();
+    const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
 
     const btn = e.target.querySelector('button');
     btn.disabled = true;
-    btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Signing In...`;
+    btn.innerHTML =
+      '<span class="spinner-border spinner-border-sm"></span> Signing In...';
 
     const { error } = await supabaseClient.auth.signInWithPassword({
       email,
@@ -137,10 +150,11 @@
     });
 
     btn.disabled = false;
-    btn.innerHTML = "Sign In";
+    btn.textContent = 'Sign In';
 
     if (error) {
       alert(error.message);
+      console.error(error);
     } else {
       window.location.href = "dashboard.html";
     }
@@ -149,3 +163,4 @@
 
 </body>
 </html>
+
